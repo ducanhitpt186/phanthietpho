@@ -65,7 +65,53 @@ select {
   z-index: -1;
   background: #7fd6f2 url("assets/bg.jpg")
     center top / cover no-repeat;
+  overflow: hidden;
   pointer-events: none;
+}
+
+/* ===== ÁNH NẮNG (không bắt chạm, không ảnh hưởng nút bấm) ===== */
+
+.scene::before,
+.scene::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* quầng sáng mặt trời ở góc trên bên phải */
+.scene::before {
+  top: -30vmax;
+  right: -30vmax;
+  width: 90vmax;
+  height: 90vmax;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 249, 214, .95) 0,
+    rgba(255, 240, 175, .65) 7%,
+    rgba(255, 226, 140, .30) 20%,
+    rgba(255, 220, 130, .12) 38%,
+    transparent 62%
+  );
+  animation: sunpulse 8s ease-in-out infinite;
+}
+
+/* các tia nắng tỏa ra, xoay rất chậm */
+.scene::after {
+  top: -45vmax;
+  right: -45vmax;
+  width: 120vmax;
+  height: 120vmax;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, .26) 0deg 4deg,
+    transparent 4deg 16deg
+  );
+  -webkit-mask-image: radial-gradient(circle at center, #000 0, transparent 58%);
+  mask-image: radial-gradient(circle at center, #000 0, transparent 58%);
+  opacity: .55;
+  animation: sunspin 120s linear infinite;
 }
 
 /* ===== MAIN LAYOUT ===== */
@@ -162,27 +208,7 @@ h1 {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 12px 30px rgba(8, 70, 130, .2);
-  animation: float 4s ease-in-out infinite,
-             glow 2.6s ease-out infinite;
   transition: transform .2s;
-}
-
-.why::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(
-    105deg,
-    transparent 35%,
-    rgba(255, 255, 255, .8) 50%,
-    transparent 65%
-  );
-  background-size: 250% 100%;
-  background-position: 150% 0;
-  animation: shine 3.4s ease-in-out infinite;
 }
 
 .why:hover {
@@ -210,7 +236,6 @@ h1 {
   background: linear-gradient(160deg, #ff3b3b, #e60012);
   box-shadow: 0 8px 18px rgba(230, 0, 18, .3);
   transform: rotate(-5deg);
-  animation: wob 2.8s ease-in-out infinite;
 }
 
 .ytbig svg {
@@ -256,13 +281,8 @@ h1 {
   color: #0b5aa8;
 }
 
-.arr {
-  animation: nudge 1.1s ease-in-out infinite;
-}
-
 .why[aria-expanded="true"] .arr {
   transform: rotate(-90deg);
-  animation: none;
 }
 
 .tap {
@@ -277,17 +297,13 @@ h1 {
 }
 
 .tap i {
-  position: absolute;
-  inset: 5px;
-  border: 3px solid #ffb703;
-  border-radius: 50%;
-  animation: ripple 1.8s ease-out infinite;
+  display: none;
 }
 
 .tap em {
   font-style: normal;
   font-size: 1.5rem;
-  animation: tapf 1.8s ease-in-out infinite;
+  transform: rotate(-8deg);
 }
 
 .spark {
@@ -296,7 +312,6 @@ h1 {
   height: 3px;
   border-radius: 3px;
   background: #ff3b30;
-  animation: blink 1.6s ease-in-out infinite;
 }
 
 .s1 {
@@ -309,7 +324,6 @@ h1 {
   left: -12px;
   top: 27px;
   background: #ffb703;
-  animation-delay: .4s;
 }
 
 .s3 {
@@ -317,55 +331,18 @@ h1 {
   top: 42px;
   transform: rotate(35deg);
   background: #1d8cf8;
-  animation-delay: .8s;
 }
 
-/* ===== ANIMATIONS ===== */
+/* ===== ANIMATIONS (chỉ còn ánh nắng ở nền) ===== */
 
-@keyframes float {
-  0%, 100% { translate: 0 0; rotate: -.5deg; }
-  50% { translate: 0 -3px; rotate: .5deg; }
+@keyframes sunpulse {
+  0%, 100% { opacity: .85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
 }
 
-@keyframes glow {
-  0% {
-    box-shadow: 0 12px 30px rgba(8, 70, 130, .2),
-      0 0 0 0 rgba(255, 45, 45, .3);
-  }
-  80%, 100% {
-    box-shadow: 0 12px 30px rgba(8, 70, 130, .2),
-      0 0 0 12px rgba(255, 45, 45, 0);
-  }
-}
-
-@keyframes shine {
-  0%, 35% { background-position: 150% 0; }
-  75%, 100% { background-position: -50% 0; }
-}
-
-@keyframes wob {
-  0%, 100% { transform: rotate(-5deg) scale(1); }
-  50% { transform: rotate(-2deg) scale(1.04); }
-}
-
-@keyframes nudge {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 3px 0; }
-}
-
-@keyframes ripple {
-  0% { transform: scale(.5); opacity: 1; }
-  100% { transform: scale(1.4); opacity: 0; }
-}
-
-@keyframes tapf {
-  0%, 100% { transform: translateY(3px) rotate(-8deg); }
-  50% { transform: translateY(-2px) rotate(-8deg); }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: .25; scale: .8; }
-  50% { opacity: 1; scale: 1; }
+@keyframes sunspin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ===== COLLAPSIBLE PANEL ===== */
