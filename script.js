@@ -79,6 +79,83 @@
     });
   }
 
+  /* ===== Thêm vào màn hình chính (icon logo ngoài màn hình điện thoại) =====
+     - Android/Chrome/Edge: dùng hộp thoại cài đặt chính thức của trình duyệt.
+     - iPhone/iPad (Safari): iOS không cho web tự cài, nên hiện hướng dẫn 3 bước.
+     - Trình duyệt trong app (Zalo, Facebook...): nhắc mở bằng Safari/Chrome trước. */
+  var installBox=d.getElementById('installBox'),installBtn=d.getElementById('installBtn'),
+      idlg=d.getElementById('installDlg'),deferred=null;
+  var isStandalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  var isIOS=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var isAndroid=/Android/i.test(ua);
+
+  if(isStandalone&&installBox)installBox.hidden=true;
+
+  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+  }
+
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e});
+  window.addEventListener('appinstalled',function(){
+    deferred=null;
+    if(installBox)installBox.hidden=true;
+    say('Đã thêm vào màn hình chính',2600);
+  });
+
+  function step(n,html){return '<li><i>'+n+'</i><span>'+html+'</span></li>'}
+
+  function showInstallHelp(){
+    var warn='',steps='';
+    var shareIc='<svg class="inl" width="20" height="20"><use href="#i-ios-share"/></svg>';
+    if(inApp){
+      warn='<p class="warn">Bạn đang mở trong trình duyệt của ứng dụng (Zalo, Facebook…). Hãy mở bằng '+(isIOS?'Safari':'Chrome')+' để thêm được icon.</p>';
+      steps=
+        step(1,'Bấm nút <b>⋯</b> (hoặc <b>⋮</b>) ở góc màn hình')+
+        step(2,'Chọn <b>Mở bằng trình duyệt</b> ('+(isIOS?'Safari':'Chrome')+')')+
+        step(3,'Bấm lại nút <b>Thêm vào màn hình chính</b> trên trang');
+    }else if(isIOS){
+      steps=
+        step(1,'Bấm nút <b>Chia sẻ</b> '+shareIc+' ở thanh dưới của Safari')+
+        step(2,'Kéo xuống, chọn <b>Thêm vào Màn hình chính</b>')+
+        step(3,'Bấm <b>Thêm</b> ở góc trên bên phải');
+    }else if(isAndroid){
+      steps=
+        step(1,'Bấm nút <b>⋮</b> ở góc trên của Chrome')+
+        step(2,'Chọn <b>Thêm vào Màn hình chính</b> (hoặc <b>Cài đặt ứng dụng</b>)')+
+        step(3,'Bấm <b>Thêm</b> để xác nhận');
+    }else{
+      steps=
+        step(1,'Bấm biểu tượng <b>Cài đặt</b> ở cuối thanh địa chỉ (Chrome/Edge)')+
+        step(2,'Hoặc mở menu <b>⋮</b> rồi chọn <b>Cài đặt ứng dụng</b> / <b>Lưu và chia sẻ</b>')+
+        step(3,'Bấm <b>Cài đặt</b> để xác nhận');
+    }
+    idlg.innerHTML=
+      '<img class="dlg-ic" src="icons/icon-192.png" alt="" width="72" height="72">'+
+      '<p id="installTtl"><b>Thêm vào màn hình chính</b></p>'+
+      '<p class="sub">Icon logo Phan Thiết Phố sẽ nằm ngay trên màn hình điện thoại.</p>'+
+      warn+'<ol class="steps">'+steps+'</ol>'+
+      '<div style="display:grid;gap:10px">'+
+        (inApp?'<button class="pill white" id="idCopy" type="button">Sao chép liên kết trang</button>':'')+
+        '<button class="pill green" id="idClose" type="button">Đã hiểu</button>'+
+      '</div>';
+    var c=idlg.querySelector('#idCopy');
+    if(c)c.addEventListener('click',function(){
+      copyText(location.href).then(function(){say('Đã sao chép liên kết',2400)}).catch(function(){say(location.href,3200)});
+    });
+    idlg.querySelector('#idClose').addEventListener('click',function(){idlg.close?idlg.close():idlg.removeAttribute('open')});
+    if(idlg.showModal){if(!idlg.open)idlg.showModal()}else idlg.setAttribute('open','');
+  }
+
+  if(installBtn)installBtn.addEventListener('click',function(){
+    if(deferred&&!inApp){
+      deferred.prompt();
+      deferred.userChoice.then(function(r){
+        if(r&&r.outcome==='accepted')say('Đang thêm vào màn hình chính…',2400);
+        deferred=null;
+      }).catch(function(){deferred=null});
+    }else showInstallHelp();
+  });
+
   d.getElementById('shareBtn').addEventListener('click',function(){
     var data={title:'Đức Anh Hoàng – Phan Thiết Phố',url:location.href};
     if(navigator.share){navigator.share(data).catch(function(){})}

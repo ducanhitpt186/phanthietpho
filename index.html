@@ -8,7 +8,15 @@
 <meta name="theme-color" content="#8fd0fa">
 <meta property="og:title" content="Đức Anh Hoàng – Phan Thiết Phố">
 <meta property="og:image" content="assets/logo.png">
-<link rel="icon" href="assets/logo.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="application-name" content="Phan Thiết Phố">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Phan Thiết Phố">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
@@ -24,6 +32,8 @@
 <symbol id="i-user" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="10" cy="8" r="3.6"/><path d="M3.5 19c0-3.300 2.900-5.500 6.500-5.500s6.500 2.200 6.500 5.500z"/></g><path d="M18.500 8v5M16 10.500h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="i-share" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="6" cy="12" r="2.6"/><circle cx="17.500" cy="6" r="2.6"/><circle cx="17.500" cy="18" r="2.6"/></g><path d="m8 11 7.500-4M8 13l7.500 4" stroke="currentColor" stroke-width="1.7" fill="none"/></symbol>
 <symbol id="i-qr" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.500" y="3.500" width="6.500" height="6.500" rx="1.200"/><rect x="14" y="3.500" width="6.500" height="6.500" rx="1.200"/><rect x="3.500" y="14" width="6.500" height="6.500" rx="1.200"/></g><g fill="currentColor"><rect x="6" y="6" width="1.600" height="1.600"/><rect x="16.500" y="6" width="1.600" height="1.600"/><rect x="6" y="16.500" width="1.600" height="1.600"/><rect x="14" y="14" width="2.500" height="2.500"/><rect x="18" y="14" width="2.500" height="2.500"/><rect x="14" y="18" width="2.500" height="2.500"/><rect x="18" y="18" width="2.500" height="2.500"/></g></symbol>
+<symbol id="i-add" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M12 8.500v7M8.500 12h7"/></g></symbol>
+<symbol id="i-ios-share" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8.500 7.500 12 4l3.500 3.500"/><path d="M7 11H6.500A1.500 1.500 0 0 0 5 12.500v6A1.500 1.500 0 0 0 6.500 20h11a1.500 1.500 0 0 0 1.500-1.500v-6a1.500 1.500 0 0 0-1.500-1.500H17"/></g></symbol>
 <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5.500 6.500 6.500L9 18.500" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><path d="m5.500 12.500 4.200 4.200 8.800-9.200" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="s-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"><circle cx="10.500" cy="10.500" r="6"/><path d="m15 15 5 5"/></g></symbol>
@@ -133,14 +143,18 @@
     <button class="pill green" id="shareBtn" type="button"><svg width="22" height="22"><use href="#i-share"/></svg><span>Chia sẻ danh thiếp</span><svg class="cv w" width="16" height="16"><use href="#i-chev"/></svg></button>
     <button class="pill white" id="qrBtn" type="button"><svg width="22" height="22"><use href="#i-qr"/></svg><span>QR Code</span><svg class="cv" width="16" height="16"><use href="#i-chev"/></svg></button>
   </div>
-  <footer>
-  <i></i>
-  © 2026 <a href="https://lich-su-kien.vercel.app" target="_blank" rel="noopener noreferrer">Đức Anh</a>.
-  <i></i>
-</footer>
+  <div class="install narrow" id="installBox">
+    <button class="inst" id="installBtn" type="button" aria-haspopup="dialog">
+      <img class="inst-ic" src="icons/icon-192.png" alt="" width="52" height="52">
+      <span class="t"><b>Thêm vào màn hình chính</b><small>Mở danh thiếp nhanh như một ứng dụng</small></span>
+      <span class="chip c-orange"><svg width="18" height="18"><use href="#i-add"/></svg>Thêm</span>
+    </button>
+  </div>
+  <footer><i></i>© 2026 Đức Anh.<i></i></footer>
 </main>
 
 <dialog id="qrDlg"><p><b>Quét để mở danh thiếp</b></p><div id="qr"></div><button class="pill green" id="qrClose" type="button">Đóng</button></dialog>
+<dialog id="installDlg" aria-labelledby="installTtl"></dialog>
 <div class="toast" id="toast" role="status"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="script.js"></script>
