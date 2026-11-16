@@ -1,14 +1,224 @@
 (function(){
   var d=document,root=d.documentElement;
 
+  root.classList.add('js');
+  var pageUrl=location.href.split('#')[0];
+
+  /* ===== Lịch âm Việt Nam (thuật toán của Hồ Ngọc Đức, múi giờ +7) ===== */
+  var LUNAR=(function(){
+    var PI=Math.PI;
+    function INT(x){return Math.floor(x)}
+    function jdFromDate(dd,mm,yy){
+      var a=INT((14-mm)/12),y=yy+4800-a,m=mm+12*a-3;
+      var jd=dd+INT((153*m+2)/5)+365*y+INT(y/4)-INT(y/100)+INT(y/400)-32045;
+      if(jd<2299161)jd=dd+INT((153*m+2)/5)+365*y+INT(y/4)-32083;
+      return jd;
+    }
+    function newMoon(k,tz){
+      var T=k/1236.85,T2=T*T,T3=T2*T,dr=PI/180;
+      var Jd1=2415020.75933+29.53058868*k+0.0001178*T2-0.000000155*T3;
+      Jd1+=0.00033*Math.sin((166.56+132.87*T-0.009173*T2)*dr);
+      var M=359.2242+29.10535608*k-0.0000333*T2-0.00000347*T3;
+      var Mpr=306.0253+385.81691806*k+0.0107306*T2+0.00001236*T3;
+      var F=21.2964+390.67050646*k-0.0016528*T2-0.00000239*T3;
+      var C1=(0.1734-0.000393*T)*Math.sin(M*dr)+0.0021*Math.sin(2*dr*M);
+      C1=C1-0.4068*Math.sin(Mpr*dr)+0.0161*Math.sin(dr*2*Mpr);
+      C1=C1-0.0004*Math.sin(dr*3*Mpr);
+      C1=C1+0.0104*Math.sin(dr*2*F)-0.0051*Math.sin(dr*(M+Mpr));
+      C1=C1-0.0074*Math.sin(dr*(M-Mpr))+0.0004*Math.sin(dr*(2*F+M));
+      C1=C1-0.0004*Math.sin(dr*(2*F-M))-0.0006*Math.sin(dr*(2*F+Mpr));
+      C1=C1+0.0010*Math.sin(dr*(2*F-Mpr))+0.0005*Math.sin(dr*(2*Mpr+M));
+      var dt=T<-11?0.001+0.000839*T+0.0002261*T2-0.00000845*T3-0.000000081*T*T3:-0.000278+0.000265*T+0.000262*T2;
+      return INT(Jd1+C1-dt+0.5+tz/24);
+    }
+    function sunLong(jdn,tz){
+      var T=(jdn-2451545.5-tz/24)/36525,T2=T*T,dr=PI/180;
+      var M=357.52910+35999.05030*T-0.0001559*T2-0.00000048*T*T2;
+      var L0=280.46645+36000.76983*T+0.0003032*T2;
+      var DL=(1.914600-0.004817*T-0.000014*T2)*Math.sin(dr*M);
+      DL=DL+(0.019993-0.000101*T)*Math.sin(dr*2*M)+0.000290*Math.sin(dr*3*M);
+      var L=(L0+DL)*dr;L=L-PI*2*INT(L/(PI*2));
+      return INT(L/PI*6);
+    }
+    function month11(yy,tz){
+      var k=INT((jdFromDate(31,12,yy)-2415021)/29.530588853);
+      var nm=newMoon(k,tz);
+      if(sunLong(nm,tz)>=9)nm=newMoon(k-1,tz);
+      return nm;
+    }
+    function leapOffset(a11,tz){
+      var k=INT((a11-2415021.076998695)/29.530588853+0.5),last,i=1,arc=sunLong(newMoon(k+i,tz),tz);
+      do{last=arc;i++;arc=sunLong(newMoon(k+i,tz),tz)}while(arc!=last&&i<14);
+      return i-1;
+    }
+    function convert(dd,mm,yy,tz){
+      var dn=jdFromDate(dd,mm,yy),k=INT((dn-2415021.076998695)/29.530588853);
+      var ms=newMoon(k+1,tz);if(ms>dn)ms=newMoon(k,tz);
+      var a11=month11(yy,tz),b11=a11,ly;
+      if(a11>=ms){ly=yy;a11=month11(yy-1,tz)}else{ly=yy+1;b11=month11(yy+1,tz)}
+      var ld=dn-ms+1,diff=INT((ms-a11)/29),leap=0,lm=diff+11;
+      if(b11-a11>365){var lo=leapOffset(a11,tz);if(diff>=lo){lm=diff+10;if(diff==lo)leap=1}}
+      if(lm>12)lm-=12;
+      if(lm>=11&&diff<4)ly-=1;
+      return {day:ld,month:lm,year:ly,leap:leap,jd:dn};
+    }
+    var CAN=['Giáp','Ất','Bính','Đinh','Mậu','Kỷ','Canh','Tân','Nhâm','Quý'];
+    var CHI=['Tý','Sửu','Dần','Mão','Thìn','Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi'];
+    return {
+      convert:function(d,m,y){return convert(d,m,y,7)},
+      yearName:function(y){return CAN[(y+6)%10]+' '+CHI[(y+8)%12]},
+      dayName:function(jd){return CAN[(jd+9)%10]+' '+CHI[(jd+1)%12]}
+    };
+  })();
+
+  /* ===== Lời chào theo giờ + ngày dương/âm + hiệu ứng nền =====
+     Xem thử từng buổi: thêm ?time=sang | trua | chieu | toi vào cuối địa chỉ trang */
+  var THU=['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+  var PERIODS={
+    sang:['buổi sáng','l-sunrise','#e67700','#8fd0fa'],
+    trua:['buổi trưa','l-sun','#e03131','#8fd0fa'],
+    chieu:['buổi chiều','l-wind','#d9480f','#f3c58f'],
+    toi:['buổi tối','l-moon','#ffd54a','#0b1a3a']
+  };
+  var forced=(location.search.match(/[?&]time=(sang|trua|chieu|toi)\b/)||[])[1];
+  function vnNow(){
+    try{
+      var p={};
+      new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',hourCycle:'h23',weekday:'short'})
+        .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value});
+      return {y:+p.year,m:+p.month,d:+p.day,h:(+p.hour)%24,wd:{Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[p.weekday]};
+    }catch(e){
+      var n=new Date();
+      return {y:n.getFullYear(),m:n.getMonth()+1,d:n.getDate(),h:n.getHours(),wd:n.getDay()};
+    }
+  }
+  function periodOf(h){return h>=5&&h<11?'sang':h>=11&&h<13?'trua':h>=13&&h<18?'chieu':'toi'}
+  function rnd(a,b){return a+Math.random()*(b-a)}
+  /* Hiệu ứng nền nhẹ máy: chỉ dùng CSS (transform/opacity), số phần tử ít */
+  function buildFx(per){
+    var fx=d.getElementById('fx');if(!fx)return;
+    fx.innerHTML='';
+    var i,e,s,frag=d.createDocumentFragment();
+    function add(cls,css){e=d.createElement('i');e.className=cls;for(var k in css)e.style[k]=css[k];frag.appendChild(e);return e}
+    if(per==='sang'||per==='trua'){
+      // mây trôi chậm qua bầu trời
+      for(i=0;i<5;i++){
+        s=rnd(.6,1.25);
+        add('cloud',{top:rnd(1,34)+'%',width:220*s+'px',height:90*s+'px',opacity:rnd(.6,.92).toFixed(2),
+          animationDuration:rnd(70,130)+'s',animationDelay:-rnd(0,130)+'s'});
+      }
+    }else if(per==='chieu'){
+      // gió thoảng + lá rơi nhẹ
+      for(i=0;i<8;i++){
+        s=rnd(.7,1.2);
+        add('leaf'+(i%3===1?' g':i%3===2?' r':''),{width:16*s+'px',height:11*s+'px',left:rnd(0,100)+'%',
+          animationDuration:rnd(13,22)+'s',animationDelay:-rnd(0,22)+'s'});
+      }
+      for(i=0;i<4;i++){
+        add('wind',{top:rnd(8,75)+'%',animationDuration:rnd(5,9)+'s',animationDelay:-rnd(0,9)+'s'});
+      }
+    }else{
+      // sao lấp lánh + sao băng thỉnh thoảng rơi
+      for(i=0;i<36;i++){
+        e=add('star',{left:rnd(0,100)+'%',top:rnd(0,62)+'%',animationDuration:rnd(2,6)+'s',animationDelay:-rnd(0,5)+'s'});
+        if(Math.random()<.2){e.style.width='3px';e.style.height='3px'}
+      }
+      for(i=0;i<3;i++){
+        add('meteor',{top:rnd(2,30)+'%',left:rnd(45,95)+'%',animationDuration:rnd(7,12)+'s',animationDelay:rnd(0,8)+'s'});
+      }
+    }
+    fx.appendChild(frag);
+  }
+  var curPeriod='',curDay='';
+  function updateToday(){
+    var t=vnNow(),per=forced||periodOf(t.h),info=PERIODS[per];
+    if(per!==curPeriod){
+      curPeriod=per;
+      root.classList.remove('t-sang','t-trua','t-chieu','t-toi');
+      root.classList.add('t-'+per);
+      root.style.setProperty('--accent',info[2]);
+      d.getElementById('greetPart').textContent=info[0];
+      d.getElementById('greetIc').firstElementChild.setAttribute('href','#'+info[1]);
+      var tc=d.getElementById('themeColor');if(tc)tc.setAttribute('content',info[3]);
+      buildFx(per);
+    }
+    var key=t.y+'-'+t.m+'-'+t.d;
+    if(key!==curDay){
+      curDay=key;
+      d.getElementById('solarTxt').innerHTML='Hôm nay là <b>'+THU[t.wd]+'</b>, ngày '+t.d+' tháng '+t.m+' năm '+t.y;
+      var L=LUNAR.convert(t.d,t.m,t.y);
+      var dayTxt=(L.day<=10?'Mùng ':'Ngày ')+L.day;
+      var tag=(L.month===1&&L.day<=3&&!L.leap)?'Tết Nguyên Đán':L.day===15?'Rằm':'';
+      d.getElementById('lunarTxt').innerHTML='Âm lịch: <b>'+dayTxt+' tháng '+L.month+(L.leap?' nhuận':'')+'</b> năm '+LUNAR.yearName(L.year)+(tag?' <span class="lunar-tag">'+tag+'</span>':'');
+    }
+  }
+  updateToday();
+  setInterval(updateToday,60000);
+
   var btn=d.getElementById('whyBtn'),panel=d.getElementById('whyPanel'),lbl=d.getElementById('whyLbl');
+  var lblText=lbl.textContent;
   btn.addEventListener('click',function(){
     var open=btn.getAttribute('aria-expanded')==='true';
     btn.setAttribute('aria-expanded',String(!open));
     panel.classList.toggle('open',!open);
-    lbl.textContent=open?'Khám phá 5 lý do quan trọng':'Thu gọn nội dung';
+    lbl.textContent=open?lblText:'Thu gọn';
     if(!open)setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'start'})},200);
+    setTimeout(prog,50);
   });
+
+  /* ===== Bài viết: nút thu gọn cuối bài, mục lục, hiện dần, thanh tiến độ, ô tìm kiếm tự gõ ===== */
+  function foldArticle(){
+    btn.click();
+    setTimeout(function(){btn.scrollIntoView({behavior:'smooth',block:'center'})},60);
+  }
+  var fold=d.getElementById('foldBtn'),fab=d.getElementById('fabFold');
+  if(fold)fold.addEventListener('click',foldArticle);
+  if(fab)fab.addEventListener('click',foldArticle);
+
+  d.querySelectorAll('.toc a').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var t=d.querySelector(a.getAttribute('href'));
+      if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})}
+    });
+  });
+
+  var rvs=[].slice.call(d.querySelectorAll('.rv'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
+    },{rootMargin:'0px 0px -8% 0px'});
+    rvs.forEach(function(el){io.observe(el)});
+  }else rvs.forEach(function(el){el.classList.add('in')});
+
+  var bar=d.getElementById('readbar'),barI=bar&&bar.firstElementChild,art=panel.querySelector('.article');
+  function prog(){
+    if(!bar)return;
+    var open=panel.classList.contains('open');
+    bar.classList.toggle('on',open);
+    if(!open){if(fab){fab.classList.remove('show');fab.tabIndex=-1}return}
+    var r=art.getBoundingClientRect(),vh=window.innerHeight,h=r.height-vh;
+    if(fab){var vis=r.top<vh*.35&&r.bottom>vh*.8;fab.classList.toggle('show',vis);fab.tabIndex=vis?0:-1}
+    var p=h>0?Math.min(1,Math.max(0,-r.top/h)):1;
+    barI.style.transform='scaleX('+p+')';
+  }
+  window.addEventListener('scroll',prog,{passive:true});
+  window.addEventListener('resize',prog);
+
+  var q=d.getElementById('typeQ');
+  if(q){
+    var qs=['resort Mũi Né sát biển','villa view biển Phan Thiết','nhà hàng hải sản Mũi Né','quán cà phê đẹp Phan Thiết'];
+    var still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!still){
+      var qi=0,ci=qs[0].length,del=true;
+      setTimeout(function tick(){
+        var w=qs[qi];
+        if(del){ci--;if(ci<=0){ci=0;del=false;qi=(qi+1)%qs.length}}
+        else{ci++;if(ci>=w.length){ci=w.length;del=true;q.textContent=w;return setTimeout(tick,1800)}}
+        q.textContent=qs[qi].slice(0,ci);
+        setTimeout(tick,del?35:90);
+      },1800);
+    }
+  }
 
   var toast=d.getElementById('toast'),toastTimer;
   function say(m,ms){
@@ -79,11 +289,77 @@
     });
   }
 
+  /* ===== Tiện ích hay dùng (nội dung sửa trong trang /admin) ===== */
+  var toolsBox=d.getElementById('tools'),toolsGrid=d.getElementById('toolsGrid'),toolDlg=d.getElementById('toolDlg');
+  function safeUrl(u){return typeof u==='string'&&/^https?:\/\/\S+$/i.test(u.trim())?u.trim():''}
+  function safePath(p){return typeof p==='string'&&/^uploads\/[\w.\-\/]+$/.test(p)&&p.indexOf('..')<0?p:''}
+  function el(tag,cls,txt){var e=d.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+  function svgUse(id,w){
+    var ns='http://www.w3.org/2000/svg',s=d.createElementNS(ns,'svg'),u=d.createElementNS(ns,'use');
+    s.setAttribute('width',w);s.setAttribute('height',w);u.setAttribute('href','#'+id);s.appendChild(u);return s;
+  }
+  function iconNode(it){
+    if(safePath(it.icon)){var im=el('img');im.src=it.icon;im.alt='';im.loading='lazy';return im}
+    return d.createTextNode(it.name.trim().charAt(0).toUpperCase());
+  }
+  function closeDlg(x){x.close?x.close():x.removeAttribute('open')}
+  function openTool(it){
+    var u=safeUrl(it.url),f=safePath(it.file);
+    toolDlg.innerHTML='';
+    var head=el('div','td-head'),ic=el('div','td-ic tool-ic'+(safePath(it.icon)?'':' letter'));
+    ic.appendChild(iconNode(it));head.appendChild(ic);head.appendChild(el('h3',null,it.name));
+    toolDlg.appendChild(head);
+    if(it.note){toolDlg.appendChild(el('p','td-lbl','Hướng dẫn sử dụng'));toolDlg.appendChild(el('p','td-note',it.note))}
+    var btns=el('div','td-btns');
+    if(u){
+      var a=el('a','pill green');a.href=u;a.target='_blank';a.rel='noopener';
+      a.appendChild(svgUse(it.download?'l-download':'l-external',18));a.appendChild(d.createTextNode(it.download?'Tải tệp về':'Mở liên kết'));btns.appendChild(a);
+    }
+    if(f){
+      var b=el('a','pill '+(u?'white':'green'));b.href=f;b.setAttribute('download',it.fileName||'');
+      b.appendChild(svgUse('l-download',18));b.appendChild(d.createTextNode('Tải tệp về'));btns.appendChild(b);
+      if(it.fileName)btns.appendChild(el('p','td-hint','Tệp: '+it.fileName));
+      if(inApp)btns.appendChild(el('p','td-hint','Nếu không tải được, hãy bấm nút ⋯ rồi chọn “Mở bằng trình duyệt”.'));
+    }
+    var c=el('button','pill white','Đóng');c.type='button';
+    c.addEventListener('click',function(){closeDlg(toolDlg)});
+    btns.appendChild(c);toolDlg.appendChild(btns);
+    if(toolDlg.showModal){if(!toolDlg.open)toolDlg.showModal()}else toolDlg.setAttribute('open','');
+  }
+  function renderTools(list){
+    if(!Array.isArray(list))return;
+    list=list.filter(function(it){return it&&typeof it.name==='string'&&it.name.trim()});
+    if(!list.length||!toolsGrid)return;
+    toolsGrid.innerHTML='';
+    list.forEach(function(it){
+      var u=safeUrl(it.url),f=safePath(it.file),box=el('div','tool');
+      var a=el('a','tool-ic'+(safePath(it.icon)?'':' letter'));
+      a.appendChild(iconNode(it));
+      a.setAttribute('aria-label',it.name+(u?(it.download?' – tải tệp về':' – mở liên kết'):f?' – tải tệp về':' – xem hướng dẫn'));
+      if(u){a.href=u;a.target='_blank';a.rel='noopener'}
+      else if(f&&!inApp){a.href=f;a.setAttribute('download',it.fileName||'')}
+      else{a.href='#';a.addEventListener('click',function(e){e.preventDefault();openTool(it)})}
+      box.appendChild(a);
+      if((!u&&f)||(u&&it.download)){var bd=el('span','tool-badge');bd.appendChild(svgUse('l-download',11));box.appendChild(bd)}
+      box.appendChild(el('span','tool-name',it.name));
+      if(it.note){
+        var ib=el('button','tool-info');ib.type='button';ib.setAttribute('aria-label','Hướng dẫn sử dụng '+it.name);
+        ib.appendChild(svgUse('l-info',14));ib.addEventListener('click',function(){openTool(it)});box.appendChild(ib);
+      }
+      toolsGrid.appendChild(box);
+    });
+    toolsBox.hidden=false;
+  }
+  if(toolsBox&&window.fetch){
+    fetch('data/tienich.json?t='+Date.now(),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null}).then(renderTools).catch(function(){});
+  }
+
   /* ===== Thêm vào màn hình chính (icon logo ngoài màn hình điện thoại) =====
      - Android/Chrome/Edge: dùng hộp thoại cài đặt chính thức của trình duyệt.
      - iPhone/iPad (Safari): iOS không cho web tự cài, nên hiện hướng dẫn 3 bước.
      - Trình duyệt trong app (Zalo, Facebook...): nhắc mở bằng Safari/Chrome trước. */
-  var installBox=d.getElementById('installBox'),installBtn=d.getElementById('installBtn'),
+  var installBox=d.getElementById('installBtn'),installBtn=d.getElementById('installBtn'),
       idlg=d.getElementById('installDlg'),deferred=null;
   var isStandalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
   var isIOS=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -140,7 +416,7 @@
       '</div>';
     var c=idlg.querySelector('#idCopy');
     if(c)c.addEventListener('click',function(){
-      copyText(location.href).then(function(){say('Đã sao chép liên kết',2400)}).catch(function(){say(location.href,3200)});
+      copyText(pageUrl).then(function(){say('Đã sao chép liên kết',2400)}).catch(function(){say(pageUrl,3200)});
     });
     idlg.querySelector('#idClose').addEventListener('click',function(){idlg.close?idlg.close():idlg.removeAttribute('open')});
     if(idlg.showModal){if(!idlg.open)idlg.showModal()}else idlg.setAttribute('open','');
@@ -157,7 +433,7 @@
   });
 
   d.getElementById('shareBtn').addEventListener('click',function(){
-    var data={title:'Đức Anh Hoàng – Phan Thiết Phố',url:location.href};
+    var data={title:'Đức Anh Hoàng – Phan Thiết Phố',url:pageUrl};
     if(navigator.share){navigator.share(data).catch(function(){})}
     else if(navigator.clipboard){navigator.clipboard.writeText(data.url).then(function(){say('Đã sao chép liên kết')})}
     else say(data.url);
@@ -165,7 +441,7 @@
 
   var dlg=d.getElementById('qrDlg'),made=false;
   d.getElementById('qrBtn').addEventListener('click',function(){
-    if(!made&&window.QRCode){new QRCode(d.getElementById('qr'),{text:location.href,width:200,height:200});made=true}
+    if(!made&&window.QRCode){new QRCode(d.getElementById('qr'),{text:pageUrl,width:200,height:200});made=true}
     dlg.showModal();
   });
   d.getElementById('qrClose').addEventListener('click',function(){dlg.close()});
