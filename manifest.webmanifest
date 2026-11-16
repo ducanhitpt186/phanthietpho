@@ -1,0 +1,17 @@
+{
+  "name": "Đức Anh Hoàng – Phan Thiết Phố",
+  "short_name": "Phan Thiết Phố",
+  "description": "Danh thiếp số của Đức Anh Hoàng – kênh YouTube Phan Thiết Phố.",
+  "lang": "vi",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eaf6ff",
+  "theme_color": "#8fd0fa",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
