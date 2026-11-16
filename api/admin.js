@@ -10,8 +10,10 @@
      GITHUB_TOKEN    token GitHub (quyền Contents: Read and write)
      GITHUB_REPO     ví dụ: tenban/phanthietpho
      GITHUB_BRANCH   thường là: main
-     RELEASES_REPO   (không bắt buộc) kho công khai chứa tệp tải về,
-                     mặc định: <tên-tài-khoản>/phanthietpho-tai-ve
+     RELEASES_REPO   (không bắt buộc) kho CÔNG KHAI chứa tệp tải về
+                     (GitHub Releases). Mặc định: chính GITHUB_REPO.
+     ADMIN_SECRET    (không bắt buộc) chuỗi bí mật để mã hóa mật khẩu;
+                     mặc định dùng GITHUB_TOKEN.
 
    Tệp lớn (tới 10 MB) được gửi thành nhiều phần nhỏ (vì Vercel
    chỉ nhận ~4,5 MB mỗi lần), máy chủ ghép lại rồi lưu vào GitHub.
@@ -23,6 +25,9 @@ const MAX_ITEMS = 60;
 const MAX_FILE_BYTES = 2 * 1024 * 1024;   // ảnh icon tối đa 2 MB (thực tế ~30 KB)
 const MAX_PART_BYTES = 3 * 1024 * 1024;   // mỗi phần gửi lên tối đa 3 MB
 const MAX_PARTS = 6;
+const REL_TAG = 'tai-ve';                     // bản phát hành chứa tệp tải về
+const REL_MAX_BYTES = 50 * 1024 * 1024;       // tệp tải về tối đa 50 MB
+const REL_MAX_PARTS = 20;
 const ICON_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
 const BLOCKED_EXT = ['html', 'htm', 'js', 'mjs', 'svg', 'xml', 'php', 'exe', 'bat', 'cmd', 'sh'];
 
@@ -37,6 +42,13 @@ let passCacheAt = 0;
 
 function scryptHex(pw, saltHex) {
   return crypto.scryptSync(pw, Buffer.from(saltHex, 'hex'), 32).toString('hex');
+}
+
+/* Kho đang để công khai nên mã băm mật khẩu được trộn thêm khóa bí mật
+   (chỉ nằm trên Vercel) – người xem kho không thể dò ngược mật khẩu. */
+function pepperedHex(pw, saltHex) {
+  const s = crypto.scryptSync(pw, Buffer.from(saltHex, 'hex'), 32);
+  return crypto.createHmac('sha256', env('ADMIN_SECRET') || env('GITHUB_TOKEN')).update(s).digest('hex');
 }
 
 async function loadPassRecord() {
@@ -57,7 +69,7 @@ async function passwordOk(p) {
   let got;
   let want;
   if (rec) {
-    got = Buffer.from(scryptHex(p, rec.salt), 'hex');
+    got = Buffer.from(rec.algo === 'scrypt+hmac' ? pepperedHex(p, rec.salt) : scryptHex(p, rec.salt), 'hex');
     want = Buffer.from(rec.hash, 'hex');
   } else {
     got = crypto.createHash('sha256').update(p).digest();
@@ -67,8 +79,8 @@ async function passwordOk(p) {
 }
 
 /* ---------- gọi GitHub ---------- */
-async function gh(path, options = {}) {
-  const res = await fetch(`https://api.github.com/repos/${env('GITHUB_REPO')}${path}`, {
+async function gh(path, options = {}, repo = env('GITHUB_REPO')) {
+  const res = await fetch(`https://api.github.com/repos/${repo}${path}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${env('GITHUB_TOKEN')}`,
@@ -81,8 +93,8 @@ async function gh(path, options = {}) {
   return res;
 }
 
-async function ghJson(path, options, what) {
-  const r = await gh(path, options);
+async function ghJson(path, options, what, repo) {
+  const r = await gh(path, options || {}, repo);
   if (!r.ok) {
     let msg = '';
     try { msg = (await r.json()).message || ''; } catch (e) { /* bỏ qua */ }
@@ -140,6 +152,63 @@ async function commitTree(changes, message) {
 async function listTree() {
   const t = await ghJson(`/git/trees/${encodeURIComponent(branch())}?recursive=1`, {}, 'đọc danh sách tệp');
   return t.tree || [];
+}
+
+/* ---------- GitHub Releases: kho tệp tải về ---------- */
+const relRepo = () => env('RELEASES_REPO') || env('GITHUB_REPO');
+
+async function getRelease(create) {
+  const r = await gh(`/releases/tags/${REL_TAG}`, {}, relRepo());
+  if (r.ok) return r.json();
+  if (r.status !== 404) throw new Error(`GitHub báo lỗi ${r.status} khi đọc Releases của ${relRepo()}`);
+  if (!create) return null;
+  return ghJson('/releases', {
+    method: 'POST',
+    body: JSON.stringify({
+      tag_name: REL_TAG,
+      ...(relRepo() === env('GITHUB_REPO') ? { target_commitish: branch() } : {}),
+      name: 'Kho tệp tải về',
+      body: 'Tệp tải về của trang Phan Thiết Phố – quản lý trong trang /admin.',
+      draft: false,
+      prerelease: false,
+    }),
+  }, 'tạo bản phát hành "' + REL_TAG + '"', relRepo());
+}
+
+function assetInfo(a) {
+  return {
+    id: a.id,
+    name: a.name,
+    label: a.label || a.name,
+    size: a.size || 0,
+    downloads: a.download_count || 0,
+    url: a.browser_download_url,
+    created: a.created_at,
+  };
+}
+
+function safeAssetName(original) {
+  const dot = original.lastIndexOf('.');
+  const ext = (dot > 0 ? original.slice(dot + 1) : '').replace(/[^A-Za-z0-9]/g, '').slice(0, 10);
+  const base = (dot > 0 ? original.slice(0, dot) : original)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, 80) || 'tep';
+  return { base, ext, name: base + (ext ? '.' + ext : '') };
+}
+
+async function readBlobs(shas) {
+  const out = new Array(shas.length);
+  let next = 0;
+  async function worker() {
+    while (next < shas.length) {
+      const i = next++;
+      const b = await ghJson(`/git/blobs/${shas[i]}`, {}, 'đọc phần tệp');
+      out[i] = Buffer.from(b.content || '', 'base64');
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  return Buffer.concat(out);
 }
 
 /* ---------- tiện ích ---------- */
@@ -212,8 +281,7 @@ module.exports = async function handler(req, res) {
   try {
     switch (body.action) {
       case 'login': {
-        const owner = env('GITHUB_REPO').split('/')[0];
-        return res.json({ ok: true, owner, releasesRepo: env('RELEASES_REPO') || `${owner}/phanthietpho-tai-ve` });
+        return res.json({ ok: true, repo: env('GITHUB_REPO'), releasesRepo: relRepo(), releaseTag: REL_TAG });
       }
 
       case 'list': {
@@ -325,6 +393,12 @@ module.exports = async function handler(req, res) {
           }, 'thử ghi');
           return 'Ghi được vào kho';
         });
+        await step('Kho tệp tải về (GitHub Releases)', async () => {
+          const repoInfo = await ghJson('', {}, 'đọc kho ' + relRepo(), relRepo());
+          if (repoInfo.private) throw new Error(relRepo() + ' đang để Private – người ngoài sẽ không tải được tệp');
+          const rel = await getRelease(false);
+          return relRepo() + ' (công khai) · ' + (rel ? (rel.assets || []).length + ' tệp' : 'chưa có tệp – sẽ tự tạo khi tải tệp đầu tiên');
+        });
         await step('Tệp dữ liệu ' + DATA_PATH, async () => {
           const f = await getContent(DATA_PATH);
           return f ? 'Có sẵn' : 'Chưa có – sẽ tự tạo khi bạn bấm Lưu lần đầu (bình thường)';
@@ -346,6 +420,64 @@ module.exports = async function handler(req, res) {
         return res.json({ ok: true });
       }
 
+      /* Kho tệp tải về: danh sách tệp trong bản phát hành "tai-ve" */
+      case 'relList': {
+        const rel = await getRelease(false);
+        const assets = rel ? (rel.assets || []).map(assetInfo) : [];
+        assets.sort((a, b) => String(b.created).localeCompare(String(a.created)));
+        return res.json({ ok: true, repo: relRepo(), tag: REL_TAG, exists: !!rel, assets });
+      }
+
+      /* Kho tệp tải về: ghép các phần đã gửi rồi đưa lên GitHub Releases */
+      case 'relUpload': {
+        const parts = Array.isArray(body.parts) ? body.parts : [];
+        if (!parts.length || parts.length > REL_MAX_PARTS || !parts.every((x) => /^[0-9a-f]{40}$/.test(x))) {
+          throw new Error('Danh sách phần tệp không hợp lệ');
+        }
+        const original = cleanText(body.name, 160) || 'tep';
+        const buf = await readBlobs(parts);
+        if (!buf.length) throw new Error('Tệp trống');
+        if (buf.length > REL_MAX_BYTES) throw new Error('Tệp quá lớn (tối đa 50 MB)');
+        const rel = await getRelease(true);
+        let { base, ext, name } = safeAssetName(original);
+        const same = (rel.assets || []).find((a) => a.name.toLowerCase() === name.toLowerCase());
+        if (same) {
+          if (body.replace === true) {
+            await ghJson(`/releases/assets/${same.id}`, { method: 'DELETE' }, 'xóa tệp cũ', relRepo());
+          } else {
+            name = `${base}-${Date.now().toString(36)}${ext ? '.' + ext : ''}`;
+          }
+        }
+        const up = await fetch(
+          `https://uploads.github.com/repos/${relRepo()}/releases/${rel.id}/assets?name=${encodeURIComponent(name)}&label=${encodeURIComponent(original.slice(0, 120))}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${env('GITHUB_TOKEN')}`,
+              Accept: 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'phanthietpho-admin',
+              'Content-Type': 'application/octet-stream',
+            },
+            body: buf,
+          },
+        );
+        if (!up.ok) {
+          let msg = '';
+          try { msg = (await up.json()).message || ''; } catch (e) { /* bỏ qua */ }
+          throw new Error(`GitHub báo lỗi ${up.status} khi tải tệp lên Releases${msg ? ': ' + msg : ''}`);
+        }
+        return res.json({ ok: true, asset: assetInfo(await up.json()) });
+      }
+
+      /* Kho tệp tải về: xóa hẳn 1 tệp */
+      case 'relDelete': {
+        const id = Number(body.id);
+        if (!Number.isInteger(id) || id <= 0) throw new Error('Mã tệp không hợp lệ');
+        await ghJson(`/releases/assets/${id}`, { method: 'DELETE' }, 'xóa tệp', relRepo());
+        return res.json({ ok: true });
+      }
+
       /* Đổi mật khẩu trang admin */
       case 'changePassword': {
         const np = typeof body.newPassword === 'string' ? body.newPassword : '';
@@ -353,7 +485,7 @@ module.exports = async function handler(req, res) {
         if (np.length > 100) throw new Error('Mật khẩu mới quá dài');
         if (np === body.password) throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại');
         const salt = crypto.randomBytes(16).toString('hex');
-        const rec = { algo: 'scrypt', salt, hash: scryptHex(np, salt), updated: new Date().toISOString() };
+        const rec = { algo: 'scrypt+hmac', salt, hash: pepperedHex(np, salt), updated: new Date().toISOString() };
         await putContent(PASS_PATH, Buffer.from(JSON.stringify(rec, null, 2) + '\n').toString('base64'), '[skip deploy] Đổi mật khẩu trang admin');
         passCache = rec;
         passCacheAt = Date.now();

@@ -303,29 +303,39 @@
     return d.createTextNode(it.name.trim().charAt(0).toUpperCase());
   }
   function closeDlg(x){x.close?x.close():x.removeAttribute('open')}
+  function isDownload(it,u){
+    return !!(it.download||/\/releases\/download\//i.test(u)||/\.(exe|msi|zip|rar|7z|apk|dmg|pdf|mp4|mp3|docx?|xlsx?|pptx?)(\?|#|$)/i.test(u));
+  }
+  /* Bấm icon → luôn mở bảng "Hướng dẫn sử dụng" đầy đủ, rồi mới Mở liên kết / Tải về */
   function openTool(it){
-    var u=safeUrl(it.url),f=safePath(it.file);
+    var u=safeUrl(it.url),f=safePath(it.file),dl=u?isDownload(it,u):!!f;
     toolDlg.innerHTML='';
     var head=el('div','td-head'),ic=el('div','td-ic tool-ic'+(safePath(it.icon)?'':' letter'));
-    ic.appendChild(iconNode(it));head.appendChild(ic);head.appendChild(el('h3',null,it.name));
-    toolDlg.appendChild(head);
-    if(it.note){toolDlg.appendChild(el('p','td-lbl','Hướng dẫn sử dụng'));toolDlg.appendChild(el('p','td-note',it.note))}
+    ic.appendChild(iconNode(it));head.appendChild(ic);
+    var ht=el('div','td-ttl');ht.appendChild(el('h3',null,it.name));
+    ht.appendChild(el('span','td-kind',dl?'Tệp tải về':u?'Liên kết':'Thông tin'));
+    head.appendChild(ht);toolDlg.appendChild(head);
+    toolDlg.appendChild(el('p','td-lbl','Hướng dẫn sử dụng'));
+    toolDlg.appendChild(el('div','td-note'+(it.note?'':' empty'),it.note||'Chưa có hướng dẫn cho tiện ích này.'));
     var btns=el('div','td-btns');
     if(u){
-      var a=el('a','pill green');a.href=u;a.target='_blank';a.rel='noopener';
-      a.appendChild(svgUse(it.download?'l-download':'l-external',18));a.appendChild(d.createTextNode(it.download?'Tải tệp về':'Mở liên kết'));btns.appendChild(a);
+      var a=el('a','pill '+(dl?'green':'blue'));a.href=u;a.target='_blank';a.rel='noopener';
+      a.appendChild(svgUse(dl?'l-download':'l-external',18));a.appendChild(d.createTextNode(dl?'Tải về':'Mở liên kết'));btns.appendChild(a);
     }
     if(f){
       var b=el('a','pill '+(u?'white':'green'));b.href=f;b.setAttribute('download',it.fileName||'');
-      b.appendChild(svgUse('l-download',18));b.appendChild(d.createTextNode('Tải tệp về'));btns.appendChild(b);
-      if(it.fileName)btns.appendChild(el('p','td-hint','Tệp: '+it.fileName));
+      b.appendChild(svgUse('l-download',18));b.appendChild(d.createTextNode('Tải về'));btns.appendChild(b);
+    }
+    if((u&&dl)||f){
       if(inApp)btns.appendChild(el('p','td-hint','Nếu không tải được, hãy bấm nút ⋯ rồi chọn “Mở bằng trình duyệt”.'));
     }
     var c=el('button','pill white','Đóng');c.type='button';
     c.addEventListener('click',function(){closeDlg(toolDlg)});
     btns.appendChild(c);toolDlg.appendChild(btns);
     if(toolDlg.showModal){if(!toolDlg.open)toolDlg.showModal()}else toolDlg.setAttribute('open','');
+    toolDlg.scrollTop=0;
   }
+  if(toolDlg)toolDlg.addEventListener('click',function(e){if(e.target===toolDlg)closeDlg(toolDlg)});
   function renderTools(list){
     if(!Array.isArray(list))return;
     list=list.filter(function(it){return it&&typeof it.name==='string'&&it.name.trim()});
@@ -333,19 +343,14 @@
     toolsGrid.innerHTML='';
     list.forEach(function(it){
       var u=safeUrl(it.url),f=safePath(it.file),box=el('div','tool');
-      var a=el('a','tool-ic'+(safePath(it.icon)?'':' letter'));
+      var a=el('button','tool-ic'+(safePath(it.icon)?'':' letter'));a.type='button';
       a.appendChild(iconNode(it));
-      a.setAttribute('aria-label',it.name+(u?(it.download?' – tải tệp về':' – mở liên kết'):f?' – tải tệp về':' – xem hướng dẫn'));
-      if(u){a.href=u;a.target='_blank';a.rel='noopener'}
-      else if(f&&!inApp){a.href=f;a.setAttribute('download',it.fileName||'')}
-      else{a.href='#';a.addEventListener('click',function(e){e.preventDefault();openTool(it)})}
+      a.setAttribute('aria-label',it.name+' – xem hướng dẫn sử dụng');
+      a.addEventListener('click',function(){openTool(it)});
       box.appendChild(a);
-      if((!u&&f)||(u&&it.download)){var bd=el('span','tool-badge');bd.appendChild(svgUse('l-download',11));box.appendChild(bd)}
-      box.appendChild(el('span','tool-name',it.name));
-      if(it.note){
-        var ib=el('button','tool-info');ib.type='button';ib.setAttribute('aria-label','Hướng dẫn sử dụng '+it.name);
-        ib.appendChild(svgUse('l-info',14));ib.addEventListener('click',function(){openTool(it)});box.appendChild(ib);
-      }
+      if((u&&isDownload(it,u))||(!u&&f)){var bd=el('span','tool-badge');bd.appendChild(svgUse('l-download',11));box.appendChild(bd)}
+      var nm=el('button','tool-name',it.name);nm.type='button';nm.addEventListener('click',function(){openTool(it)});
+      box.appendChild(nm);
       toolsGrid.appendChild(box);
     });
     toolsBox.hidden=false;

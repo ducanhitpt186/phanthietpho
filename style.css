@@ -3669,3 +3669,113 @@ body,
 .end-row .fold-mini {
   flex: 0 0 auto;
 }
+
+
+/* =====================================================
+   BẢN 9: BẢNG HƯỚNG DẪN SỬ DỤNG TIỆN ÍCH
+   ===================================================== */
+
+/* icon & tên tiện ích giờ là nút bấm */
+button.tool-ic {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+button.tool-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+button.tool-name:focus-visible {
+  outline: 3px solid #ffb703;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* bảng hướng dẫn: kính mờ, rộng hơn, hiện đủ nội dung (cuộn được nếu dài) */
+#toolDlg {
+  width: min(92vw, 520px);
+  max-height: min(88dvh, 760px);
+  padding: 22px 20px 18px;
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .86);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#toolDlg::backdrop {
+  background: rgba(8, 30, 60, .38);
+  backdrop-filter: blur(6px);
+}
+
+#toolDlg .td-head {
+  margin-bottom: 14px;
+}
+
+#toolDlg .td-ic {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  font-size: 1.4rem;
+}
+
+#toolDlg .td-ttl {
+  min-width: 0;
+}
+
+#toolDlg .td-ttl h3 {
+  overflow-wrap: anywhere;
+}
+
+#toolDlg .td-kind {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .06);
+  color: #475569;
+  font-size: .74rem;
+  font-weight: 600;
+}
+
+#toolDlg .td-note {
+  max-height: none;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(241, 245, 249, .85);
+  color: #111827;
+  font-size: 1rem;
+  line-height: 1.65;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+#toolDlg .td-note.empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+#toolDlg .td-btns .pill {
+  width: 100%;
+}
+
+.pill.blue {
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, .28);
+}

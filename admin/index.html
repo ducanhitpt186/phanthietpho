@@ -92,6 +92,46 @@
   }
   .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ===== GIAO DIỆN KIỂU iOS 26: kính mờ, bo tròn, nền ảnh mờ ===== */
+  :root{--ios-blue:#0a84ff;--ios-green:#109b01;--ios-red:#ff3b30;--glass:rgba(255,255,255,.6);--glass-strong:rgba(255,255,255,.78);--hair:rgba(255,255,255,.75)}
+  body{background:#cfe6f7;font-family:"Be Vietnam Pro",-apple-system,"SF Pro Text",system-ui,sans-serif}
+  body::before{content:"";position:fixed;inset:-60px;z-index:-2;background:url(/assets/bg.jpg) center/cover no-repeat;filter:blur(30px) saturate(150%);transform:scale(1.08)}
+  body::after{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(235,245,255,.25) 40%,rgba(255,255,255,.35))}
+  .wrap{padding-top:0}
+  header{position:sticky;top:0;z-index:15;flex-wrap:wrap;gap:10px;margin:0 -14px 16px;padding:max(10px,env(safe-area-inset-top)) 14px 10px;background:rgba(255,255,255,.55);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:.5px solid rgba(15,23,42,.08)}
+  header img{width:40px;height:40px;border-radius:11px;box-shadow:0 2px 8px rgba(15,23,42,.12)}
+  header h1{font-size:1.2rem;font-weight:800;letter-spacing:-.02em}
+  .hnav{display:flex;gap:6px;flex-wrap:wrap}
+  .card{background:var(--glass);backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);border:1px solid var(--hair);border-radius:28px;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 10px 30px rgba(15,40,80,.1)}
+  h2{font-size:1.12rem;font-weight:800;letter-spacing:-.015em}
+  .muted,.hint,label small{color:#475569}
+  input[type=text],input[type=url],input[type=password],textarea,select.pick{background:rgba(255,255,255,.72);border:1px solid rgba(15,23,42,.1);border-radius:14px;box-shadow:inset 0 1px 2px rgba(15,23,42,.04)}
+  select.pick{width:100%;margin-top:8px;padding:10px 12px;font:inherit;font-size:.92rem;color:#0f172a}
+  select.pick:disabled{opacity:.55}
+  input:focus,textarea:focus,select.pick:focus{outline:none;border-color:var(--ios-blue);box-shadow:0 0 0 4px rgba(10,132,255,.18)}
+  .btn{border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(15,23,42,.08);box-shadow:0 1px 3px rgba(15,23,42,.06);font-weight:600}
+  .btn.primary{background:linear-gradient(135deg,#22c53a,#12a702);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(18,167,2,.25)}
+  .btn.blue{background:var(--ios-blue);border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(10,132,255,.28)}
+  .btn.danger{background:rgba(255,59,48,.12);border-color:transparent;color:var(--ios-red)}
+  .btn.ghost{background:rgba(255,255,255,.5);border-color:rgba(255,255,255,.7);box-shadow:none}
+  .item{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);border-radius:20px}
+  .empty{border:1.5px dashed rgba(15,23,42,.15);border-radius:20px;background:rgba(255,255,255,.35)}
+  .ic{border-radius:13px}
+  .bar{background:rgba(15,23,42,.08)}
+  .checks li{background:rgba(52,199,89,.12);border-radius:14px}
+  .checks li.bad{background:rgba(255,59,48,.1)}
+  .steps-mini li,.note-box{background:rgba(255,255,255,.5)}
+  .status{border-radius:999px;background:rgba(15,23,42,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .status.err{background:rgba(220,38,38,.9)}
+  dialog{background:var(--glass-strong);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--hair);border-radius:30px;box-shadow:0 30px 80px rgba(15,23,42,.3)}
+  dialog::backdrop{background:rgba(15,23,42,.35);backdrop-filter:blur(6px)}
+  .drop{display:flex;flex-direction:column;align-items:center;padding:18px 12px;border:1.5px dashed rgba(10,132,255,.35);border-radius:22px;background:rgba(255,255,255,.4);text-align:center;transition:background .2s,border-color .2s}
+  .drop.over{background:rgba(10,132,255,.1);border-color:var(--ios-blue)}
+  .done{margin-top:12px;padding:12px;border-radius:18px;background:rgba(52,199,89,.12)}
+  .copyrow{display:flex;gap:8px;margin-top:8px}
+  .copyrow input{flex:1;min-width:0;font-size:.85rem !important;padding:8px 12px !important}
+  @media (max-width:560px){header h1{flex:1 1 calc(100% - 60px)} .hnav{width:100%} .hnav .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -99,8 +139,11 @@
   <header>
     <img src="/icons/icon-192.png" alt="">
     <h1>Trang quản trị<small>Phan Thiết Phố – Tiện ích hay dùng</small></h1>
-    <a class="btn ghost sm" href="/" target="_blank" rel="noopener">Xem trang ↗</a>
-    <button class="btn ghost sm hidden" id="logoutBtn" type="button">Đăng xuất</button>
+    <nav class="hnav">
+      <a class="btn ghost sm" id="khoLink" href="https://github.com/" target="_blank" rel="noopener">KHO ↗</a>
+      <a class="btn ghost sm" href="/" target="_blank" rel="noopener">Xem trang ↗</a>
+      <button class="btn ghost sm hidden" id="logoutBtn" type="button">Đăng xuất</button>
+    </nav>
   </header>
 
   <!-- ĐĂNG NHẬP -->
@@ -123,24 +166,26 @@
       <div class="list" id="list"></div>
     </div>
 
-    <div class="card rel-card" id="relCard">
-      <h2>📦 Tải tệp lên GitHub Releases</h2>
-      <p class="muted" style="margin:0 0 10px">Ghi chú: tệp lớn (phần mềm .exe, video, PDF…) để ở GitHub Releases – miễn phí, mỗi tệp tới 2 GB, không giới hạn lượt tải. Tải lên xong thì sao chép link để dán vào tiện ích hoặc gửi cho khách.</p>
-      <label for="relRepo" style="margin-top:0">Kho chứa tệp <small>(phải để Public – công khai)</small></label>
-      <input type="text" id="relRepo" spellcheck="false" autocapitalize="off" placeholder="tentaikhoan/phanthietpho-tai-ve">
-      <div class="rel-btns">
-        <a class="btn blue" id="relUpload" target="_blank" rel="noopener">⬆ Tải tệp lên (bản v1)</a>
-        <a class="btn" id="relList" target="_blank" rel="noopener">📄 Xem tệp đã đăng</a>
-        <a class="btn" id="relNew" target="_blank" rel="noopener">＋ Tạo bản phát hành mới</a>
-        <a class="btn" id="relRepoNew" target="_blank" rel="noopener">🗂 Tạo kho chứa tệp (lần đầu)</a>
+    <div class="card" id="relCard">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">📦 Kho tệp tải về</h2>
+        <a class="btn sm" id="relOpen" target="_blank" rel="noopener">Mở trên GitHub ↗</a>
       </div>
-      <ol class="steps-mini">
-        <li>Bấm <b>⬆ Tải tệp lên</b> → trang GitHub mở ra (đăng nhập GitHub nếu được hỏi).</li>
-        <li>Kéo tệp vào khung <b>Attach binaries by dropping them here…</b>, chờ chạy xong → bấm <b>Update release</b>.</li>
-        <li>Ở mục <b>Assets</b>: máy tính thì <b>chuột phải</b> vào tên tệp → <b>Sao chép địa chỉ liên kết</b>; điện thoại thì <b>nhấn giữ</b> tên tệp → <b>Sao chép liên kết</b>.</li>
-        <li>Dán link vào ô <b>Liên kết</b> của tiện ích (tick <b>Đây là link tải tệp</b>) hoặc gửi thẳng cho khách.</li>
-      </ol>
-      <p class="hint">Lần đầu dùng: bấm <b>🗂 Tạo kho chứa tệp</b> → chọn <b>Public</b>, tick <b>Add a README file</b> → <b>Create repository</b>. Sau đó bấm <b>＋ Tạo bản phát hành mới</b> → <b>Choose a tag</b> gõ <b>v1</b> → <b>Create new tag</b> → kéo tệp vào → <b>Publish release</b>.</p>
+      <p class="muted" style="margin:8px 0 12px">Tệp được lưu ở <b>GitHub Releases</b> của kho <b id="relRepoName">…</b> – ai cũng tải được qua link. Tối đa 50 MB mỗi tệp.</p>
+      <div class="drop" id="relDrop">
+        <input type="file" id="relFile" class="hidden">
+        <button class="btn blue" type="button" id="relPick">⬆ Chọn tệp để tải lên</button>
+        <p class="hint" style="margin:8px 0 0">hoặc kéo thả tệp vào khung này</p>
+      </div>
+      <div class="hidden" id="relProg" style="margin-top:12px">
+        <div class="bar"><i id="relBar"></i></div>
+        <p class="progress" id="relProgTxt" style="margin:8px 0 0"></p>
+      </div>
+      <div class="done hidden" id="relDone">
+        <b>✅ Đã tải lên: <span id="relDoneName"></span></b>
+        <div class="copyrow"><input type="text" id="relDoneUrl" readonly><button class="btn sm primary" type="button" id="relDoneCopy">Sao chép link</button></div>
+      </div>
+      <div class="list" id="relList" style="margin-top:14px"><div class="empty">Đang tải…</div></div>
     </div>
 
     <div class="card">
@@ -200,14 +245,12 @@
 
     <label for="fUrl">Liên kết (URL) <small>(trang web hoặc link tải tệp)</small></label>
     <input type="url" id="fUrl" placeholder="https://...">
-    <label class="check"><input type="checkbox" id="fDownload"><span>Đây là link <b>tải tệp</b> (hiện dấu tải xuống trên icon)</span></label>
-    <p class="hint">Tệp lớn (phần mềm .exe, video, PDF…): đưa lên <b>GitHub Releases</b>, <b>Google Drive</b> hoặc <b>MediaFire</b>, rồi dán link tải vào ô trên.</p>
-    <a class="rel-link" id="fRelLink" target="_blank" rel="noopener">⬆ Mở GitHub Releases để tải tệp lên ↗</a>
+    <select id="fPick" class="pick"><option value="">📦 Hoặc chọn tệp từ Kho tệp tải về…</option></select>
 
     <label for="fNote">Ghi chú / Hướng dẫn sử dụng <small>(được xuống dòng)</small></label>
     <textarea id="fNote" maxlength="3000" placeholder="Bước 1: ...&#10;Bước 2: ..."></textarea>
 
-    <div class="note-box">Ngoài trang chính: bấm vào icon sẽ <b>mở liên kết</b> (hoặc tải tệp nếu là link tải). Ghi chú hiện khi bấm nút <b>i</b> nhỏ trên icon.</div>
+    <div class="note-box">Ngoài trang chính: bấm vào icon sẽ hiện bảng <b>Hướng dẫn sử dụng</b> (nội dung ô Ghi chú), sau đó khách bấm <b>Mở liên kết</b> hoặc <b>Tải về</b> (tự nhận biết khi là link tệp).</div>
 
     <div class="row" style="margin-top:18px;justify-content:flex-end">
       <button class="btn" type="button" id="cancelBtn">Hủy</button>
@@ -252,27 +295,104 @@
   }
   function iconSrc(p){return p?(localPreview[p]||'/'+p):''}
 
-  /* ---------- GitHub Releases: link tải tệp lên ---------- */
-  var relDefault='';
-  function relRepo(){return ($('relRepo').value.trim()||relDefault).replace(/^https?:\/\/github\.com\//i,'').replace(/\/+$/,'')}
-  function updateRelLinks(){
-    var r=relRepo(),base='https://github.com/'+r,name=(r.split('/')[1]||'phanthietpho-tai-ve');
-    $('relUpload').href=base+'/releases/edit/v1';
-    $('fRelLink').href=base+'/releases/edit/v1';
-    $('relList').href=base+'/releases';
-    $('relNew').href=base+'/releases/new';
-    $('relRepoNew').href='https://github.com/new?name='+encodeURIComponent(name)+'&visibility=public&description='+encodeURIComponent('Tệp tải về – Phan Thiết Phố');
-  }
-  $('relRepo').addEventListener('input',function(){
-    try{localStorage.setItem('ptpRelRepo',this.value.trim())}catch(e){}
-    updateRelLinks();
-  });
+  /* ---------- Kho tệp tải về (GitHub Releases) ---------- */
+  var relInfo={repo:'',releasesRepo:'',releaseTag:'tai-ve'},assets=[];
+  var REL_MAX=50*1024*1024,REL_PART=3000000;
+  function isDownloadUrl(u){return /\/releases\/download\//i.test(u||'')||/\.(exe|msi|zip|rar|7z|apk|dmg|pdf|mp4|mp3|docx?|xlsx?|pptx?)(\?|#|$)/i.test(u||'')}
   function initRel(j){
-    relDefault=(j&&j.releasesRepo)||'';
-    var saved='';try{saved=localStorage.getItem('ptpRelRepo')||''}catch(e){}
-    $('relRepo').value=saved||relDefault;
-    updateRelLinks();
+    relInfo=j||relInfo;
+    $('khoLink').href='https://github.com/'+(relInfo.repo||'');
+    $('relRepoName').textContent=relInfo.releasesRepo||'';
+    $('relOpen').href='https://github.com/'+relInfo.releasesRepo+'/releases/tag/'+(relInfo.releaseTag||'tai-ve');
   }
+  function copyText(t){
+    if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(t);
+    return new Promise(function(ok,fail){
+      var ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy')?ok():fail()}catch(e){fail(e)}document.body.removeChild(ta);
+    });
+  }
+  function copyLink(u){copyText(u).then(function(){status('Đã sao chép link tải.')}).catch(function(){prompt('Sao chép link này:',u)})}
+  function loadAssets(){
+    return call('relList').then(function(j){assets=j.assets||[];renderAssets();fillPick()}).catch(function(err){
+      $('relList').innerHTML='';status(err.message,true,8000);
+    });
+  }
+  function renderAssets(){
+    var box=$('relList');box.innerHTML='';
+    if(!assets.length){box.innerHTML='<div class="empty">Chưa có tệp nào. Bấm <b>⬆ Chọn tệp để tải lên</b>.</div>';return}
+    assets.forEach(function(a){
+      var row=document.createElement('div');row.className='item';
+      var ic=document.createElement('div');ic.className='ic sm doc';ic.textContent='📄';
+      var info=document.createElement('div');info.className='info';
+      var b=document.createElement('b');b.textContent=a.label||a.name;
+      var meta=document.createElement('div');meta.className='meta';
+      meta.textContent=fmtSize(a.size)+' · '+a.downloads+' lượt tải';
+      info.appendChild(b);info.appendChild(meta);
+      var ctl=document.createElement('div');ctl.className='ctl';
+      var cp=mkBtn('Sao chép link','Sao chép link tải',function(){copyLink(a.url)});cp.classList.add('primary');ctl.appendChild(cp);
+      var del=mkBtn('Xóa','Xóa tệp khỏi kho',function(){
+        var used=items.filter(function(it){return it.url===a.url}).map(function(it){return it.name});
+        if(!confirm('Xóa hẳn tệp "'+(a.label||a.name)+'"?'+(used.length?'\n\nTiện ích đang dùng link này: '+used.join(', ')+' – link sẽ không tải được nữa.':'')))return;
+        status('Đang xóa…',false,0);
+        call('relDelete',{id:a.id}).then(function(){status('Đã xóa tệp.');loadAssets();loadFiles()}).catch(function(err){status(err.message,true,8000)});
+      });
+      del.classList.add('danger');ctl.appendChild(del);
+      row.appendChild(ic);row.appendChild(info);row.appendChild(ctl);box.appendChild(row);
+    });
+  }
+  function fillPick(){
+    var sel=$('fPick');if(!sel)return;
+    while(sel.options.length>1)sel.remove(1);
+    assets.forEach(function(a){var o=document.createElement('option');o.value=a.url;o.textContent=(a.label||a.name)+' ('+fmtSize(a.size)+')';sel.appendChild(o)});
+    sel.disabled=!assets.length;
+    sel.value='';
+  }
+  $('fPick').addEventListener('change',function(){
+    if(!this.value)return;
+    $('fUrl').value=this.value;
+    if(!$('fName').value.trim()){
+      var t=this.options[this.selectedIndex].textContent.replace(/\s*\([^)]*\)$/,'').replace(/\.[A-Za-z0-9]{1,8}$/,'');
+      $('fName').value=t;setIconPreview();
+    }
+  });
+
+  function relUploadFile(f){
+    if(!f)return;
+    if(!f.size){status('Tệp này trống (0 KB).',true);return}
+    if(f.size>REL_MAX){status('Tệp lớn hơn 50 MB. Hãy nén lại hoặc chia nhỏ, hoặc dùng Google Drive.',true,8000);return}
+    var name=f.name,replace=false;
+    var same=assets.filter(function(a){return a.name.toLowerCase()===name.toLowerCase()||(a.label||'')===name})[0];
+    if(same)replace=confirm('Đã có tệp "'+name+'" trong kho.\n\nBấm OK để THAY THẾ tệp cũ (link cũ vẫn dùng được).\nBấm Hủy để giữ tệp cũ và lưu tệp mới với tên khác.');
+    $('relDone').classList.add('hidden');$('relProg').classList.remove('hidden');$('relPick').disabled=true;
+    function prog(pct,txt){$('relBar').style.width=Math.max(2,pct)+'%';$('relProgTxt').textContent=txt}
+    readBytes(f).then(function(bytes){
+      var parts=[],off=0,total=bytes.length;
+      function next(){
+        if(off>=total){prog(97,'Đang lưu lên GitHub Releases…');return call('relUpload',{name:name,parts:parts,replace:replace})}
+        var chunk=bytes.subarray(off,off+REL_PART);
+        prog(off/total*95,'Đang tải lên: '+Math.round(off/total*100)+'% ('+fmtSize(off)+' / '+fmtSize(total)+')');
+        return call('part',{data:b64(chunk)}).then(function(j){off+=chunk.length;parts.push(j.sha);return next()});
+      }
+      return next();
+    }).then(function(j){
+      prog(100,'Xong!');
+      $('relDoneName').textContent=j.asset.label||j.asset.name;
+      $('relDoneUrl').value=j.asset.url;
+      $('relDone').classList.remove('hidden');
+      status('Đã tải tệp lên. Bấm "Sao chép link" để chia sẻ.',false,6000);
+      return loadAssets();
+    }).catch(function(err){status(err.message,true,9000)}).then(function(){
+      $('relPick').disabled=false;$('relFile').value='';
+      setTimeout(function(){$('relProg').classList.add('hidden')},1200);
+    });
+  }
+  $('relPick').addEventListener('click',function(){$('relFile').click()});
+  $('relFile').addEventListener('change',function(){relUploadFile(this.files[0])});
+  $('relDoneCopy').addEventListener('click',function(){copyLink($('relDoneUrl').value)});
+  ['dragenter','dragover'].forEach(function(ev){$('relDrop').addEventListener(ev,function(e){e.preventDefault();this.classList.add('over')})});
+  ['dragleave','drop'].forEach(function(ev){$('relDrop').addEventListener(ev,function(e){e.preventDefault();this.classList.remove('over')})});
+  $('relDrop').addEventListener('drop',function(e){var f=e.dataTransfer&&e.dataTransfer.files[0];relUploadFile(f)});
 
   /* ---------- đăng nhập ---------- */
   function showApp(){
@@ -297,7 +417,7 @@
   /* ---------- danh sách ---------- */
   function load(){
     $('list').innerHTML='<div class="empty">Đang tải…</div>';
-    call('list').then(function(j){items=j.items||[];render();loadFiles()}).catch(function(err){
+    call('list').then(function(j){items=j.items||[];render();loadFiles();loadAssets()}).catch(function(err){
       if(err.code===401){sessionStorage.removeItem('ptpPass');localStorage.removeItem('ptpPass');location.reload();return}
       $('list').innerHTML='';status(err.message,true,8000);
     });
@@ -311,7 +431,7 @@
       var info=document.createElement('div');info.className='info';
       var b=document.createElement('b');b.textContent=it.name;
       var meta=document.createElement('div');meta.className='meta';
-      meta.textContent=[it.url?(it.download?'⬇️ ':'🔗 ')+it.url:'',it.file?'📎 '+(it.fileName||it.file):'',it.note?'📝 Có hướng dẫn':''].filter(Boolean).join('  ·  ')||'Chưa có liên kết';
+      meta.textContent=[it.url?(isDownloadUrl(it.url)?'⬇️ ':'🔗 ')+it.url:'',it.file?'📎 '+(it.fileName||it.file):'',it.note?'📝 Có hướng dẫn':''].filter(Boolean).join('  ·  ')||'Chưa có liên kết';
       info.appendChild(b);info.appendChild(meta);
       var ctl=document.createElement('div');ctl.className='ctl';
       ctl.appendChild(mkBtn('↑','Lên trên',function(){move(i,-1)},i===0));
@@ -360,7 +480,7 @@
     form={id:it.id,icon:it.icon,oldFile:it.file||'',iconData:null,dropIcon:false};
     $('editTtl').textContent=i>=0?'Sửa tiện ích':'Thêm tiện ích';
     $('fName').value=it.name;$('fUrl').value=it.url||'';$('fNote').value=it.note||'';
-    $('fDownload').checked=!!it.download;
+    fillPick();
     $('fIcon').value='';
     setIconPreview();
     dlg.showModal();setTimeout(function(){$('fName').focus()},50);
@@ -425,7 +545,7 @@
     }else if(form.dropIcon&&old.icon){toDelete.push(old.icon)}
     if(old.file)toDelete.push(old.file); // tệp tải lên từ bản cũ: chuyển sang dùng link nên xóa cho nhẹ
     p.then(function(){
-      var it={id:form.id,name:name,icon:form.icon||'',url:url,download:!!(url&&$('fDownload').checked),note:note};
+      var it={id:form.id,name:name,icon:form.icon||'',url:url,download:isDownloadUrl(url),note:note};
       var next=items.slice();
       if(editIndex>=0)next[editIndex]=it;else next.push(it);
       return saveAll(null,next);
@@ -496,7 +616,7 @@
      'Kho GitHub tính cả lịch sử: '+fmtSize((j.repoKB||0)*1024)+' (GitHub cập nhật số này chậm vài giờ)'
     ].forEach(function(t){var d=document.createElement('div');d.textContent=t;$('usageMeta').appendChild(d)});
   }
-  $('refreshFiles').addEventListener('click',function(){load();loadFiles()});
+  $('refreshFiles').addEventListener('click',function(){load();loadFiles();loadAssets()});
 
   $('checkBtn').addEventListener('click',function(){
     var btn=this,ul=$('checks');ul.innerHTML='';busy(btn,true,'Đang kiểm tra…');
