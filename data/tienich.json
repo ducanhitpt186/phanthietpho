@@ -20,5 +20,16 @@
     "fileSize": 0,
     "download": true,
     "note": "Chỉ cần 1 Click Xóa sạch các thư mục rác, proxy dự án cũ \nƯu điểm:\n Nhanh , không mở từng thư mục\nDo mình viết nên ko quảng cáo , ko virut\nHướng dẫn : Mở lên  Chọn icon capcut trên  pc  rồi nhấn Xóa là xong."
+  },
+  {
+    "id": "mwk0ufr6wt5go",
+    "name": "Upscale Ảnh",
+    "icon": "uploads/icons/mwk0w3qz-upscale-anh.png",
+    "url": "https://andyleai.github.io/Upscaleer/",
+    "file": "",
+    "fileName": "",
+    "fileSize": 0,
+    "download": false,
+    "note": "- Nâng độ phân giải hình ảnh bằng AI thay vì chỉ kéo giãn pixel.\n- Hỗ trợ hai mức phóng to 2× và 4×.\n- Giúp phục hồi chi tiết và cải thiện chất lượng hình ảnh độ phân giải thấp.\n- Có model xử lý nhanh và model ưu tiên chất lượng dành cho ảnh chụp."
   }
 ]
