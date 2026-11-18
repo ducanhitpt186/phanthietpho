@@ -21,6 +21,8 @@
 const crypto = require('crypto');
 
 const DATA_PATH = 'data/tienich.json';
+const BANK_PATH = 'data/bank.json';   // danh sách tài khoản ngân hàng (hiện ở nút "Số TK")
+const MAX_BANKS = 10;
 const MAX_ITEMS = 60;
 const MAX_FILE_BYTES = 2 * 1024 * 1024;   // ảnh icon tối đa 2 MB (thực tế ~30 KB)
 const MAX_PART_BYTES = 3 * 1024 * 1024;   // mỗi phần gửi lên tối đa 3 MB
@@ -221,7 +223,7 @@ function slugify(name) {
 }
 
 function safeUploadPath(p) {
-  return typeof p === 'string' && /^uploads\/(icons|files)\/[\w.\-]+$/.test(p) && !p.includes('..');
+  return typeof p === 'string' && /^uploads\/(icons|files|qr)\/[\w.\-]+$/.test(p) && !p.includes('..');
 }
 
 function cleanText(v, max) {
@@ -244,6 +246,26 @@ function cleanItems(items) {
       note: cleanText(it.note, 3000),
     };
   }).filter((it) => it.name);
+}
+
+function cleanBanks(list) {
+  if (!Array.isArray(list)) throw new Error('Dữ liệu ngân hàng không hợp lệ');
+  return list.slice(0, MAX_BANKS).map((b) => ({
+    id: cleanText(b.id, 40) || crypto.randomBytes(6).toString('hex'),
+    bank: cleanText(b.bank, 80),
+    owner: cleanText(b.owner, 80),
+    number: cleanText(b.number, 40).replace(/[^0-9A-Za-z .-]/g, ''),
+    qr: safeUploadPath(b.qr) && b.qr.startsWith('uploads/qr/') ? b.qr : '',
+  })).filter((b) => b.bank && b.number);
+}
+
+async function readJson(path) {
+  const f = await getContent(path);
+  if (!f || !f.content) return [];
+  try {
+    const v = JSON.parse(Buffer.from(f.content, 'base64').toString('utf8'));
+    return Array.isArray(v) ? v : [];
+  } catch (e) { return []; }
 }
 
 async function removePaths(paths) {
@@ -293,6 +315,16 @@ module.exports = async function handler(req, res) {
         return res.json({ ok: true, items: Array.isArray(items) ? items : [] });
       }
 
+      /* Số tài khoản ngân hàng */
+      case 'bankList':
+        return res.json({ ok: true, banks: await readJson(BANK_PATH) });
+
+      case 'bankSave': {
+        const banks = cleanBanks(body.banks);
+        await putContent(BANK_PATH, Buffer.from(JSON.stringify(banks, null, 2) + '\n', 'utf8').toString('base64'), 'Cập nhật Số tài khoản ngân hàng');
+        return res.json({ ok: true, banks });
+      }
+
       case 'save': {
         const items = cleanItems(body.items);
         const json = JSON.stringify(items, null, 2) + '\n';
@@ -314,8 +346,8 @@ module.exports = async function handler(req, res) {
       /* Bước 2 tải tệp: ghép các phần thành 1 tệp và lưu vào uploads/ */
       case 'finish': {
         // Từ bản 5 chỉ tải lên ảnh icon; tệp lớn dùng link ngoài (GitHub Releases, Google Drive…)
-        if (body.kind !== 'icon') throw new Error('Chỉ hỗ trợ tải lên ảnh icon. Tệp hãy dùng link từ GitHub Releases, Google Drive…');
-        const kind = 'icons';
+        if (body.kind !== 'icon' && body.kind !== 'qr') throw new Error('Chỉ hỗ trợ tải lên ảnh icon hoặc ảnh mã QR. Tệp hãy dùng Kho tệp tải về.');
+        const kind = body.kind === 'qr' ? 'qr' : 'icons';
         const parts = Array.isArray(body.parts) ? body.parts : [];
         if (!parts.length || parts.length > MAX_PARTS || !parts.every((s) => /^[0-9a-f]{40}$/.test(s))) {
           throw new Error('Danh sách phần tệp không hợp lệ');
@@ -324,7 +356,7 @@ module.exports = async function handler(req, res) {
         const dot = original.lastIndexOf('.');
         const ext = (dot > 0 ? original.slice(dot + 1) : '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
         const base = slugify(dot > 0 ? original.slice(0, dot) : original);
-        if (kind === 'icons' && !ICON_EXT.includes(ext)) throw new Error('Icon phải là ảnh PNG, JPG, WEBP hoặc GIF');
+        if (!ICON_EXT.includes(ext)) throw new Error('Ảnh phải là PNG, JPG, WEBP hoặc GIF');
         if (BLOCKED_EXT.includes(ext)) throw new Error('Không cho phép tải lên loại tệp .' + ext);
 
         let sha = parts[0];
@@ -364,7 +396,7 @@ module.exports = async function handler(req, res) {
       case 'files': {
         const [tree, repo] = await Promise.all([listTree(), ghJson('', {}, 'đọc thông tin kho')]);
         const files = tree
-          .filter((e) => e.type === 'blob' && /^uploads\/(icons|files)\//.test(e.path))
+          .filter((e) => e.type === 'blob' && /^uploads\/(icons|files|qr)\//.test(e.path))
           .map((e) => ({ path: e.path, size: e.size || 0 }));
         const siteBytes = tree.filter((e) => e.type === 'blob').reduce((s, e) => s + (e.size || 0), 0);
         return res.json({ ok: true, files, siteBytes, repoKB: repo.size || 0 });

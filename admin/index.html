@@ -57,6 +57,9 @@
   .hint{margin-top:6px;color:#64748b;font-size:.82rem}
   .note-box{margin-top:14px;padding:12px 14px;border-radius:14px;background:#eff6ff;color:#1e3a8a;font-size:.88rem}
   .hidden{display:none !important}
+  .ic.qrprev{flex-basis:96px;width:96px;height:96px;border-radius:16px;background:#fff;color:#94a3b8;font-size:1rem;box-shadow:inset 0 0 0 1px rgba(15,23,42,.1)}
+  .ic.qrprev img{object-fit:contain;background:#fff}
+  .ic.bank{background:linear-gradient(145deg,#fdba74,#f97316)}
   .rel-card{background:linear-gradient(160deg,#f0f9ff,#ffffff 60%)}
   .rel-btns{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
   .rel-btns .btn{text-align:center}
@@ -166,6 +169,15 @@
       <div class="list" id="list"></div>
     </div>
 
+    <div class="card" id="bankCard">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">🏦 Số tài khoản ngân hàng</h2>
+        <button class="btn blue" type="button" id="bankAddBtn">+ Thêm Ngân Hàng</button>
+      </div>
+      <p class="muted" style="margin:8px 0 12px">Hiện ở nút <b>“Số TK”</b> dưới nút Facebook trên trang chính. Chưa có ngân hàng nào thì nút tự ẩn. Ảnh mã QR không bắt buộc.</p>
+      <div class="list" id="bankList"><div class="empty">Đang tải…</div></div>
+    </div>
+
     <div class="card" id="relCard">
       <div class="row" style="justify-content:space-between">
         <h2 style="margin:0">📦 Kho tệp tải về</h2>
@@ -259,6 +271,33 @@
   </form>
 </dialog>
 
+<!-- FORM NGÂN HÀNG -->
+<dialog id="bankDlg">
+  <form id="bankForm" method="dialog">
+    <h2 id="bankTtl">Thêm ngân hàng</h2>
+    <label for="bName">Tên ngân hàng <small>(bắt buộc)</small></label>
+    <input type="text" id="bName" maxlength="80" required placeholder="Ví dụ: Vietcombank">
+    <label for="bOwner">Chủ tài khoản</label>
+    <input type="text" id="bOwner" maxlength="80" placeholder="Ví dụ: HOANG DUC ANH" autocapitalize="characters">
+    <label for="bNumber">Số tài khoản <small>(bắt buộc)</small></label>
+    <input type="text" id="bNumber" maxlength="40" required inputmode="numeric" placeholder="Ví dụ: 0123456789">
+    <label>Mã QR chuyển khoản <small>(không bắt buộc)</small></label>
+    <div class="iconpick">
+      <div class="ic qrprev" id="bQrPrev">QR</div>
+      <div class="row">
+        <button class="btn sm" type="button" id="bQrBtn">Chọn ảnh mã QR</button>
+        <button class="btn sm danger hidden" type="button" id="bQrDel">Bỏ mã QR</button>
+      </div>
+      <input type="file" id="bQr" accept="image/png,image/jpeg,image/webp" class="hidden">
+    </div>
+    <p class="hint">Lấy ảnh QR trong app ngân hàng (mục “Mã QR nhận tiền” → Lưu ảnh), rồi chọn ảnh đó ở đây.</p>
+    <div class="row" style="margin-top:18px;justify-content:flex-end">
+      <button class="btn" type="button" id="bankCancel">Hủy</button>
+      <button class="btn primary" type="button" id="bankSaveBtn">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="status" id="status" role="status"></div>
 
 <script>
@@ -294,6 +333,106 @@
     else box.textContent=(name||'?').trim().charAt(0).toUpperCase()||'?';
   }
   function iconSrc(p){return p?(localPreview[p]||'/'+p):''}
+
+  /* ---------- Số tài khoản ngân hàng ---------- */
+  var banks=[],bankEdit=-1,bankForm={};
+  function loadBanks(){
+    return call('bankList').then(function(j){banks=j.banks||[];renderBanks()}).catch(function(err){
+      $('bankList').innerHTML='';status(err.message,true,8000);
+    });
+  }
+  function renderBanks(){
+    var box=$('bankList');box.innerHTML='';
+    if(!banks.length){box.innerHTML='<div class="empty">Chưa có ngân hàng nào – nút “Số TK” đang ẩn. Bấm <b>+ Thêm Ngân Hàng</b>.</div>';return}
+    banks.forEach(function(bk,i){
+      var row=document.createElement('div');row.className='item';
+      var ic=document.createElement('div');ic.className='ic bank';
+      if(bk.qr)iconEl(ic,iconSrc(bk.qr),bk.bank);else ic.textContent=(bk.bank||'?').charAt(0).toUpperCase();
+      var info=document.createElement('div');info.className='info';
+      var b=document.createElement('b');b.textContent=bk.bank;
+      var meta=document.createElement('div');meta.className='meta';
+      meta.textContent=[bk.number,bk.owner,bk.qr?'Có mã QR':''].filter(Boolean).join(' · ');
+      info.appendChild(b);info.appendChild(meta);
+      var ctl=document.createElement('div');ctl.className='ctl';
+      ctl.appendChild(mkBtn('↑','Lên trên',function(){moveBank(i,-1)},i===0));
+      ctl.appendChild(mkBtn('↓','Xuống dưới',function(){moveBank(i,1)},i===banks.length-1));
+      ctl.appendChild(mkBtn('Sửa','Sửa',function(){openBank(i)}));
+      var del=mkBtn('Xóa','Xóa',function(){
+        if(!confirm('Xóa ngân hàng "'+bk.bank+'"?'))return;
+        var next=banks.slice();next.splice(i,1);
+        saveBanks(next,'Đã xóa "'+bk.bank+'".').then(function(){return removeFiles([bk.qr])}).catch(function(err){status(err.message,true,8000)});
+      });
+      del.classList.add('danger');ctl.appendChild(del);
+      row.appendChild(ic);row.appendChild(info);row.appendChild(ctl);box.appendChild(row);
+    });
+  }
+  function saveBanks(next,msg){
+    status('Đang lưu…',false,0);
+    return call('bankSave',{banks:next}).then(function(j){
+      banks=j.banks;renderBanks();renderFiles();
+      status(msg||'Đã lưu! Trang chính cập nhật sau khoảng 1 phút.',false,5000);
+    });
+  }
+  function moveBank(i,dir){
+    var j=i+dir;if(j<0||j>=banks.length)return;
+    var next=banks.slice(),t=next[i];next[i]=next[j];next[j]=t;
+    saveBanks(next,'Đã đổi thứ tự.').catch(function(err){status(err.message,true,8000)});
+  }
+  function setQrPreview(){
+    var box=$('bQrPrev');box.innerHTML='';
+    var src=bankForm.qrData||iconSrc(bankForm.qr);
+    if(src){var im=new Image();im.alt='';im.src=src;box.appendChild(im)}else box.textContent='QR';
+    $('bQrDel').classList.toggle('hidden',!src);
+  }
+  function openBank(i){
+    bankEdit=i;
+    var bk=i>=0?banks[i]:{id:uid(),bank:'',owner:'',number:'',qr:''};
+    bankForm={id:bk.id,qr:bk.qr,oldQr:bk.qr,qrData:null};
+    $('bankTtl').textContent=i>=0?'Sửa ngân hàng':'Thêm ngân hàng';
+    $('bName').value=bk.bank;$('bOwner').value=bk.owner||'';$('bNumber').value=bk.number;$('bQr').value='';
+    setQrPreview();$('bankDlg').showModal();setTimeout(function(){$('bName').focus()},50);
+  }
+  $('bankAddBtn').addEventListener('click',function(){
+    if(banks.length>=10){status('Tối đa 10 ngân hàng.',true);return}
+    openBank(-1);
+  });
+  $('bankCancel').addEventListener('click',function(){$('bankDlg').close()});
+  $('bQrBtn').addEventListener('click',function(){$('bQr').click()});
+  $('bQrDel').addEventListener('click',function(){bankForm.qrData=null;bankForm.qr='';$('bQr').value='';setQrPreview()});
+  $('bQr').addEventListener('change',function(){
+    var f=this.files[0];if(!f)return;
+    resizeQr(f).then(function(d){bankForm.qrData=d;setQrPreview()}).catch(function(){status('Không đọc được ảnh này, hãy thử ảnh khác.',true)});
+  });
+  /* ảnh QR: giữ nguyên tỉ lệ, tối đa 900px để quét vẫn rõ */
+  function resizeQr(file){
+    return new Promise(function(ok,fail){
+      var url=URL.createObjectURL(file),img=new Image();
+      img.onload=function(){
+        var w=img.naturalWidth,h=img.naturalHeight,k=Math.min(1,900/Math.max(w,h));
+        var c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+        var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.imageSmoothingQuality='high';
+        x.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);ok(c.toDataURL('image/png'));
+      };
+      img.onerror=function(){URL.revokeObjectURL(url);fail()};
+      img.src=url;
+    });
+  }
+  $('bankSaveBtn').addEventListener('click',function(){
+    var name=$('bName').value.trim(),owner=$('bOwner').value.trim(),num=$('bNumber').value.trim();
+    if(!name){status('Hãy nhập tên ngân hàng.',true);$('bName').focus();return}
+    if(!num){status('Hãy nhập số tài khoản.',true);$('bNumber').focus();return}
+    var btn=this,toDelete=[],p=Promise.resolve();busy(btn,true);
+    if(bankForm.qrData){
+      p=p.then(function(){return upload('qr','qr-'+slugName(name)+'.png',dataUrlBytes(bankForm.qrData),'Đang tải mã QR')})
+         .then(function(j){localPreview[j.path]=bankForm.qrData;if(bankForm.oldQr)toDelete.push(bankForm.oldQr);bankForm.qr=j.path});
+    }else if(!bankForm.qr&&bankForm.oldQr){toDelete.push(bankForm.oldQr)}
+    p.then(function(){
+      var bk={id:bankForm.id,bank:name,owner:owner,number:num,qr:bankForm.qr||''};
+      var next=banks.slice();if(bankEdit>=0)next[bankEdit]=bk;else next.push(bk);
+      return saveBanks(next);
+    }).then(function(){$('bankDlg').close();return removeFiles(toDelete)})
+      .catch(function(err){status(err.message,true,8000)}).then(function(){busy(btn,false)});
+  });
 
   /* ---------- Kho tệp tải về (GitHub Releases) ---------- */
   var relInfo={repo:'',releasesRepo:'',releaseTag:'tai-ve'},assets=[];
@@ -417,7 +556,7 @@
   /* ---------- danh sách ---------- */
   function load(){
     $('list').innerHTML='<div class="empty">Đang tải…</div>';
-    call('list').then(function(j){items=j.items||[];render();loadFiles();loadAssets()}).catch(function(err){
+    call('list').then(function(j){items=j.items||[];render();loadBanks().then(loadFiles);loadAssets()}).catch(function(err){
       if(err.code===401){sessionStorage.removeItem('ptpPass');localStorage.removeItem('ptpPass');location.reload();return}
       $('list').innerHTML='';status(err.message,true,8000);
     });
@@ -559,7 +698,10 @@
   var QUOTA=1024*1024*1024; // GitHub khuyên giữ kho dưới 1 GB
   var files=[];
   function baseName(p){return p.split('/').pop().replace(/^[a-z0-9]+-/,'')}
-  function usedBy(path){return items.filter(function(it){return it.icon===path||it.file===path}).map(function(it){return it.name})}
+  function usedBy(path){
+    return items.filter(function(it){return it.icon===path||it.file===path}).map(function(it){return it.name})
+      .concat(banks.filter(function(b){return b.qr===path}).map(function(b){return 'Số TK '+b.bank}));
+  }
   function loadFiles(){
     return call('files').then(function(j){files=j.files||[];renderFiles();renderUsage(j)}).catch(function(err){
       $('fileList').innerHTML='';status(err.message,true,8000);
@@ -570,7 +712,7 @@
     if(!files.length){box.innerHTML='<div class="empty">Chưa có tệp nào được tải lên.</div>';$('delOrphans').classList.add('hidden');return}
     var orphans=[];
     files.forEach(function(f){
-      var users=usedBy(f.path),isIcon=f.path.indexOf('uploads/icons/')===0;
+      var users=usedBy(f.path),isIcon=/^uploads\/(icons|qr)\//.test(f.path);
       if(!users.length)orphans.push(f.path);
       var row=document.createElement('div');row.className='item';
       var ic=document.createElement('div');ic.className='ic sm'+(isIcon?'':' doc');
@@ -581,7 +723,7 @@
       var tag=document.createElement('span');tag.className='tag'+(users.length?'':' orphan');
       tag.textContent=users.length?'Đang dùng':'Không dùng';
       meta.appendChild(tag);
-      meta.appendChild(document.createTextNode((isIcon?'Icon':'Tệp')+' · '+fmtSize(f.size)+(users.length?' · '+users.join(', '):'')));
+      meta.appendChild(document.createTextNode((f.path.indexOf('uploads/qr/')===0?'Mã QR':isIcon?'Icon':'Tệp')+' · '+fmtSize(f.size)+(users.length?' · '+users.join(', '):'')));
       info.appendChild(b);info.appendChild(meta);
       var ctl=document.createElement('div');ctl.className='ctl';
       var del=mkBtn('Xóa',users.length?'Đang dùng – hãy xóa tiện ích hoặc bỏ tệp trong nút Sửa':'Xóa tệp khỏi kho',function(){
@@ -616,7 +758,7 @@
      'Kho GitHub tính cả lịch sử: '+fmtSize((j.repoKB||0)*1024)+' (GitHub cập nhật số này chậm vài giờ)'
     ].forEach(function(t){var d=document.createElement('div');d.textContent=t;$('usageMeta').appendChild(d)});
   }
-  $('refreshFiles').addEventListener('click',function(){load();loadFiles();loadAssets()});
+  $('refreshFiles').addEventListener('click',function(){load()});
 
   $('checkBtn').addEventListener('click',function(){
     var btn=this,ul=$('checks');ul.innerHTML='';busy(btn,true,'Đang kiểm tra…');

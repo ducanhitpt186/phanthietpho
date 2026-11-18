@@ -360,6 +360,94 @@
       .then(function(r){return r.ok?r.json():null}).then(renderTools).catch(function(){});
   }
 
+  /* ===== Số tài khoản ngân hàng (nhập trong trang /admin) =====
+     Link riêng để chia sẻ: <địa chỉ trang>#so-tk */
+  var bankRow=d.getElementById('bankRow'),bankPub=d.getElementById('bankPub'),qrZoom=d.getElementById('qrZoom'),bankData=[];
+  function digits(n){return String(n||'').replace(/\s+/g,'')}
+  function groupNum(n){var x=digits(n);return /^\d+$/.test(x)?x.replace(/(\d{4})(?=\d)/g,'$1 '):x}
+  function bankText(b){
+    return 'Ngân hàng: '+b.bank+(b.owner?'\nChủ tài khoản: '+b.owner:'')+'\nSố tài khoản: '+digits(b.number);
+  }
+  function copyAnd(t,msg){copyText(t).then(function(){say(msg,2400)}).catch(function(){say('Hãy giữ ngón tay lên chữ để sao chép',3200)})}
+  function openDlg(x){if(x.showModal){if(!x.open)x.showModal()}else x.setAttribute('open','')}
+  function zoomQr(b){
+    qrZoom.innerHTML='';
+    qrZoom.appendChild(el('p','qz-ttl',b.bank));
+    if(b.owner)qrZoom.appendChild(el('p','qz-sub',b.owner+' · '+groupNum(b.number)));
+    var im=el('img','qz-img');im.src=b.qr;im.alt='Mã QR chuyển khoản '+b.bank;qrZoom.appendChild(im);
+    qrZoom.appendChild(el('p','qz-hint','Mở app ngân hàng → Quét mã QR. Nếu đang xem trên chính điện thoại này, bấm “Lưu ảnh QR” rồi chọn ảnh từ thư viện trong app ngân hàng.'));
+    var row=el('div','qz-btns');
+    var dl=el('a','pill green');dl.href=b.qr;dl.setAttribute('download','QR-'+b.bank.replace(/[^\wÀ-ỹ]+/g,'-')+'.png');
+    dl.appendChild(svgUse('l-download',18));dl.appendChild(d.createTextNode('Lưu ảnh QR'));row.appendChild(dl);
+    var c=el('button','pill white','Đóng');c.type='button';c.addEventListener('click',function(){closeDlg(qrZoom)});row.appendChild(c);
+    qrZoom.appendChild(row);openDlg(qrZoom);
+  }
+  function openBank(){
+    if(!bankData.length)return;
+    bankPub.innerHTML='';
+    var head=el('div','bk-head');
+    var ic=el('img','bk-logo');ic.src='assets/ic-bank.png';ic.alt='';head.appendChild(ic);
+    var ht=el('div');var h=el('h3',null,'Số tài khoản');h.id='bankPubTtl';ht.appendChild(h);
+    ht.appendChild(el('p','bk-sub','Thông tin chuyển khoản – bấm để sao chép'));head.appendChild(ht);
+    bankPub.appendChild(head);
+    bankData.forEach(function(b){
+      var card=el('div','bk-card');
+      card.appendChild(el('p','bk-name',b.bank));
+      if(b.owner){var o=el('p','bk-line');o.appendChild(el('span',null,'Chủ tài khoản'));o.appendChild(el('b',null,b.owner));card.appendChild(o)}
+      var nr=el('div','bk-num');
+      var nb=el('div');nb.appendChild(el('span',null,'Số tài khoản'));nb.appendChild(el('b',null,groupNum(b.number)));nr.appendChild(nb);
+      var cp=el('button','bk-copy');cp.type='button';cp.appendChild(svgUse('l-copy',16));cp.appendChild(d.createTextNode('Sao chép'));
+      cp.addEventListener('click',function(){copyAnd(digits(b.number),'Đã sao chép số tài khoản: '+digits(b.number))});
+      nr.appendChild(cp);card.appendChild(nr);
+      if(b.qr){
+        var q=el('button','bk-qr');q.type='button';q.setAttribute('aria-label','Phóng to mã QR '+b.bank+' để quét');
+        var im=el('img');im.src=b.qr;im.alt='';im.loading='lazy';q.appendChild(im);
+        q.appendChild(el('span',null,'Bấm vào mã để phóng to & quét'));
+        q.addEventListener('click',function(){zoomQr(b)});card.appendChild(q);
+      }
+      var all=el('button','pill white bk-all');all.type='button';all.appendChild(svgUse('l-copy',16));all.appendChild(d.createTextNode('Sao chép toàn bộ thông tin'));
+      all.addEventListener('click',function(){copyAnd(bankText(b),'Đã sao chép thông tin '+b.bank)});
+      card.appendChild(all);
+      bankPub.appendChild(card);
+    });
+    var btns=el('div','td-btns');
+    var sh=el('button','pill green');sh.type='button';sh.appendChild(svgUse('i-share',18));sh.appendChild(d.createTextNode('Chia sẻ link số tài khoản'));
+    sh.addEventListener('click',function(){
+      var url=pageUrl+'#so-tk';
+      if(navigator.share)navigator.share({title:'Số tài khoản – Phan Thiết Phố',text:bankData.map(bankText).join('\n\n'),url:url}).catch(function(){});
+      else copyAnd(url,'Đã sao chép link số tài khoản');
+    });
+    btns.appendChild(sh);
+    if(bankData.length>1){
+      var ca=el('button','pill white');ca.type='button';ca.appendChild(svgUse('l-copy',16));ca.appendChild(d.createTextNode('Sao chép tất cả ngân hàng'));
+      ca.addEventListener('click',function(){copyAnd(bankData.map(bankText).join('\n\n'),'Đã sao chép tất cả số tài khoản')});
+      btns.appendChild(ca);
+    }
+    var c=el('button','pill white','Đóng');c.type='button';c.addEventListener('click',function(){closeDlg(bankPub)});btns.appendChild(c);
+    bankPub.appendChild(btns);
+    openDlg(bankPub);bankPub.scrollTop=0;
+  }
+  if(bankPub){
+    bankPub.addEventListener('click',function(e){if(e.target===bankPub)closeDlg(bankPub)});
+    qrZoom.addEventListener('click',function(e){if(e.target===qrZoom)closeDlg(qrZoom)});
+    bankPub.addEventListener('close',function(){if(location.hash==='#so-tk'&&history.replaceState)history.replaceState(null,'',location.pathname+location.search)});
+  }
+  if(bankRow)bankRow.addEventListener('click',function(e){e.preventDefault();openBank()});
+  if(bankRow&&window.fetch){
+    fetch('data/bank.json?t='+Date.now(),{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null})
+      .then(function(list){
+        if(!Array.isArray(list))return;
+        bankData=list.filter(function(b){return b&&b.bank&&b.number}).map(function(b){
+          return {bank:String(b.bank),owner:String(b.owner||''),number:String(b.number),qr:safePath(b.qr)};
+        });
+        if(!bankData.length)return;
+        bankRow.hidden=false;
+        d.getElementById('bankSub').textContent=bankData.length>1?bankData.length+' ngân hàng':bankData[0].bank;
+        if(location.hash==='#so-tk')openBank();
+      }).catch(function(){});
+  }
+
   /* ===== Thêm vào màn hình chính (icon logo ngoài màn hình điện thoại) =====
      - Android/Chrome/Edge: dùng hộp thoại cài đặt chính thức của trình duyệt.
      - iPhone/iPad (Safari): iOS không cho web tự cài, nên hiện hướng dẫn 3 bước.
