@@ -1,0 +1,18 @@
+{
+  "id": "/admin/",
+  "name": "Quản trị Phan Thiết Phố",
+  "short_name": "Quản trị PTP",
+  "description": "Trang quản trị Phan Thiết Phố: lịch hẹn, tiện ích, số tài khoản, kho tệp.",
+  "lang": "vi",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
