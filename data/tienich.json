@@ -31,5 +31,16 @@
     "fileSize": 0,
     "download": false,
     "note": "- Nâng độ phân giải hình ảnh bằng AI thay vì chỉ kéo giãn pixel.\n- Hỗ trợ hai mức phóng to 2× và 4×.\n- Giúp phục hồi chi tiết và cải thiện chất lượng hình ảnh độ phân giải thấp.\n- Có model xử lý nhanh và model ưu tiên chất lượng dành cho ảnh chụp."
+  },
+  {
+    "id": "mwoi89qar8781",
+    "name": "Tăng Tốc CapCut PC",
+    "icon": "uploads/icons/mwoi8jpj-tang-toc-capcut-pc.png",
+    "url": "https://github.com/ducanhitpt186/phanthietpho/releases/download/tai-ve/CapCut_Turbo_DucAnhHoang.bat",
+    "file": "",
+    "fileName": "",
+    "fileSize": 0,
+    "download": true,
+    "note": ""
   }
 ]
