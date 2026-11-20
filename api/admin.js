@@ -557,6 +557,14 @@ async function handler(req, res) {
         return res.json({ ok: true, banks });
       }
 
+      /* Tiện ích hay dùng */
+      case 'save': {
+        const items = cleanItems(body.items);
+        const json = JSON.stringify(items, null, 2) + '\n';
+        await putContent(DATA_PATH, Buffer.from(json, 'utf8').toString('base64'), 'Cập nhật Tiện ích hay dùng');
+        return res.json({ ok: true, items });
+      }
+
       /* Lịch hẹn */
       case 'schedList':
         return res.json({ ok: true, items: await loadSchedules(), today: vnDate(0) });
